@@ -1011,45 +1011,8 @@ namespace webdriver {
   void BrowserFactory::GetExecutableLocation() {
     LOG(TRACE) << "Entering BrowserFactory::GetExecutableLocation";
 
-    std::wstring class_id;
-    if (RegistryUtilities::GetRegistryValue(HKEY_LOCAL_MACHINE,
-      IE_CLSID_REGISTRY_KEY,
-      L"",
-      &class_id)) {
-      std::wstring location_key = L"SOFTWARE\\Classes\\CLSID\\" +
-        class_id +
-        L"\\LocalServer32";
-      std::wstring executable_location;
-
-      if (RegistryUtilities::GetRegistryValue(HKEY_LOCAL_MACHINE,
-        location_key,
-        L"",
-        &executable_location)) {
-        // If the executable location in the registry has an environment
-        // variable in it, expand the environment variable to an absolute
-        // path.
-        DWORD expanded_location_size = ::ExpandEnvironmentStrings(executable_location.c_str(), NULL, 0);
-        std::vector<wchar_t> expanded_location(expanded_location_size);
-        ::ExpandEnvironmentStrings(executable_location.c_str(), &expanded_location[0], expanded_location_size);
-        executable_location = &expanded_location[0];
-        this->ie_executable_location_ = executable_location;
-        size_t arg_start_pos = executable_location.find(L" -");
-        if (arg_start_pos != std::string::npos) {
-          this->ie_executable_location_ = executable_location.substr(0, arg_start_pos);
-        }
-        if (this->ie_executable_location_.substr(0, 1) == L"\"") {
-          this->ie_executable_location_.erase(0, 1);
-          this->ie_executable_location_.erase(this->ie_executable_location_.size() - 1, 1);
-        }
-
-      }
-      else {
-        LOG(WARN) << "Unable to get IE executable location from registry";
-      }
-    }
-    else {
-      LOG(WARN) << "Unable to get IE class id from registry";
-    }
+    this->ie_executable_location_ = L"C:\\Program Files (x86)\\Internet Explorer\\iexplore.exe";
+    return;
   }
 
   void BrowserFactory::GetIEVersion() {
