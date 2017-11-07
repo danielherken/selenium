@@ -282,6 +282,7 @@ namespace webdriver {
     start_info.cb = sizeof(start_info);
 
     std::wstring executable_and_url = this->ie_executable_location_;
+
     if (this->browser_command_line_switches_.size() != 0) {
       executable_and_url.append(L" ");
       executable_and_url.append(this->browser_command_line_switches_);
