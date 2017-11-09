@@ -115,7 +115,7 @@ namespace webdriver {
     this->ignore_protected_mode_settings_ = settings.ignore_protected_mode_settings;
     this->ignore_zoom_setting_ = settings.ignore_zoom_setting;
     this->browser_attach_timeout_ = settings.browser_attach_timeout;
-    this->force_createprocess_api_ = settings.force_create_process_api;
+    this->force_createprocess_api_ = true; // settings.force_create_process_api;
     this->force_shell_windows_api_ = settings.force_shell_windows_api;
     this->clear_cache_ = settings.clear_cache_before_launch;
     this->browser_command_line_switches_ = StringUtilities::ToWString(settings.browser_command_line_switches);
