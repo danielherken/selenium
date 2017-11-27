@@ -113,7 +113,7 @@ namespace webdriver {
   void BrowserFactory::Initialize(BrowserFactorySettings settings) {
     LOG(TRACE) << "Entering BrowserFactory::Initialize";
     this->ignore_protected_mode_settings_ = settings.ignore_protected_mode_settings;
-    this->ignore_zoom_setting_ = settings.ignore_zoom_setting;
+    this->ignore_zoom_setting_ = true;
     this->browser_attach_timeout_ = settings.browser_attach_timeout;
     this->force_createprocess_api_ = true; // settings.force_create_process_api;
     this->force_shell_windows_api_ = settings.force_shell_windows_api;
