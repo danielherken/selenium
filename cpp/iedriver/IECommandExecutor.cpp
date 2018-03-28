@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <ctime>
 #include <vector>
+#include <mutex>
 
 #include "command_types.h"
 #include "errorcodes.h"
@@ -30,6 +31,7 @@
 #include "BrowserFactory.h"
 #include "CommandExecutor.h"
 #include "CommandHandlerRepository.h"
+#include "Element.h"
 #include "ElementFinder.h"
 #include "ElementRepository.h"
 #include "IECommandHandler.h"
@@ -37,6 +39,7 @@
 #include "HtmlDialog.h"
 #include "ProxyManager.h"
 #include "StringUtilities.h"
+#include "Script.h"
 
 namespace webdriver {
 
@@ -81,7 +84,6 @@ LRESULT IECommandExecutor::OnCreate(UINT uMsg,
 
   this->managed_elements_ = new ElementRepository();
   this->input_manager_ = new InputManager();
-  this->input_manager_->Initialize(this->managed_elements_);
   this->proxy_manager_ = new ProxyManager();
   this->factory_ = new BrowserFactory();
   this->element_finder_ = new ElementFinder();
@@ -338,7 +340,7 @@ LRESULT IECommandExecutor::OnQuit(UINT uMsg,
                                   WPARAM wParam,
                                   LPARAM lParam,
                                   BOOL& bHandled) {
-  this->input_manager_->StopPersistentEvents();
+  //this->input_manager_->StopPersistentEvents();
   return 0;
 }
 
@@ -347,6 +349,83 @@ LRESULT IECommandExecutor::OnGetQuitStatus(UINT uMsg,
                                            LPARAM lParam,
                                            BOOL& bHandled) {
   return this->is_quitting_ && this->managed_browsers_.size() > 0 ? 1 : 0;
+}
+
+LRESULT IECommandExecutor::OnScriptWait(UINT uMsg,
+                                        WPARAM wParam,
+                                        LPARAM lParam,
+                                        BOOL& bHandled) {
+  LOG(TRACE) << "Entering IECommandExecutor::OnScriptWait";
+
+  BrowserHandle browser;
+  int status_code = this->GetCurrentBrowser(&browser);
+  if (status_code == WD_SUCCESS && !browser->is_closing()) {
+    if (this->async_script_timeout_ >= 0 && this->wait_timeout_ < clock()) {
+      ::SendMessage(browser->script_executor_handle(),
+                    WD_ASYNC_SCRIPT_DETACH_LISTENTER,
+                    NULL,
+                    NULL);
+      Response timeout_response;
+      timeout_response.SetErrorResponse(ERROR_SCRIPT_TIMEOUT,
+                                        "Timed out waiting for script to complete.");
+      this->serialized_response_ = timeout_response.Serialize();
+      this->is_waiting_ = false;
+      browser->set_script_executor_handle(NULL);
+    } else {
+      HWND alert_handle;
+      bool is_execution_finished = ::SendMessage(browser->script_executor_handle(),
+                                                 WD_ASYNC_SCRIPT_IS_EXECUTION_COMPLETE,
+                                                 NULL,
+                                                 NULL) != 0;
+      bool is_alert_active = this->IsAlertActive(browser, &alert_handle);
+      this->is_waiting_ = !is_execution_finished && !is_alert_active;
+      if (this->is_waiting_) {
+        // If we are still waiting, we need to wait a bit then post a message to
+        // ourselves to run the wait again. However, we can't wait using Sleep()
+        // on this thread. This call happens in a message loop, and we would be 
+        // unable to process the COM events in the browser if we put this thread
+        // to sleep.
+        unsigned int thread_id = 0;
+        HANDLE thread_handle = reinterpret_cast<HANDLE>(_beginthreadex(NULL,
+                                                        0,
+                                                        &IECommandExecutor::ScriptWaitThreadProc,
+                                                        (void *)this->m_hWnd,
+                                                        0,
+                                                        &thread_id));
+        if (thread_handle != NULL) {
+          ::CloseHandle(thread_handle);
+        } else {
+          LOGERR(DEBUG) << "Unable to create waiter thread";
+        }
+      } else {
+        Response response;
+        Json::Value script_result;
+        ::SendMessage(browser->script_executor_handle(),
+                      WD_ASYNC_SCRIPT_DETACH_LISTENTER,
+                      NULL,
+                      NULL);
+        int status_code = static_cast<int>(::SendMessage(browser->script_executor_handle(),
+                                                          WD_ASYNC_SCRIPT_GET_RESULT,
+                                                          NULL,
+                                                          reinterpret_cast<LPARAM>(&script_result)));
+        if (status_code != WD_SUCCESS) {
+          std::string error_message = "Error executing JavaScript";
+          if (script_result.isString()) {
+            error_message = script_result.asString();
+          }
+          response.SetErrorResponse(status_code, error_message);
+        } else {
+          response.SetSuccessResponse(script_result);
+        }
+        ::SendMessage(browser->script_executor_handle(), WM_CLOSE, NULL, NULL);
+        browser->set_script_executor_handle(NULL);
+        this->serialized_response_ = response.Serialize();
+      }
+    }
+  } else {
+    this->is_waiting_ = false;
+  }
+  return 0;
 }
 
 LRESULT IECommandExecutor::OnRefreshManagedElements(UINT uMsg,
@@ -366,11 +445,53 @@ LRESULT IECommandExecutor::OnHandleUnexpectedAlerts(UINT uMsg,
   for (; it != this->managed_browsers_.end(); ++it) {
     HWND alert_handle = it->second->GetActiveDialogWindowHandle();
     if (alert_handle != NULL) {
-      this->HandleUnexpectedAlert(it->second, alert_handle, true);
+      std::string alert_text;
+      this->HandleUnexpectedAlert(it->second, alert_handle, true, &alert_text);
       it->second->Close();
     }
   }
   return 0;
+}
+
+LRESULT IECommandExecutor::OnTransferManagedElement(UINT uMsg,
+                                                    WPARAM wParam,
+                                                    LPARAM lParam,
+                                                    BOOL& bHandled) {
+  LOG(TRACE) << "Entering IECommandExecutor::OnTransferManagedElement";
+  ElementInfo* info = reinterpret_cast<ElementInfo*>(lParam);
+  std::string element_id = info->element_id;
+  LPSTREAM element_stream = info->element_stream;
+  BrowserHandle browser_handle;
+  this->GetCurrentBrowser(&browser_handle);
+  CComPtr<IHTMLElement> element;
+  ::CoGetInterfaceAndReleaseStream(element_stream,
+                                   IID_IHTMLElement,
+                                   reinterpret_cast<void**>(&element));
+  delete info;
+  ElementHandle element_handle;
+  this->managed_elements_->AddManagedElement(browser_handle,
+                                             element,
+                                             &element_handle);
+  RemappedElementInfo* return_info = new RemappedElementInfo;
+  return_info->original_element_id = element_id;
+  return_info->element_id = element_handle->element_id();
+  ::PostMessage(browser_handle->script_executor_handle(),
+                WD_ASYNC_SCRIPT_NOTIFY_ELEMENT_TRANSFERRED,
+                NULL,
+                reinterpret_cast<LPARAM>(return_info));
+  return WD_SUCCESS;
+}
+
+LRESULT IECommandExecutor::OnScheduleRemoveManagedElement(UINT uMsg,
+                                                          WPARAM wParam,
+                                                          LPARAM lParam,
+                                                          BOOL& bHandled) {
+  LOG(TRACE) << "Entering IECommandExecutor::OnScheduleRemoveManagedElement";
+  ElementInfo* info = reinterpret_cast<ElementInfo*>(lParam);
+  std::string element_id = info->element_id;
+  delete info;
+  this->RemoveManagedElement(element_id);
+  return WD_SUCCESS;
 }
 
 unsigned int WINAPI IECommandExecutor::WaitThreadProc(LPVOID lpParameter) {
@@ -381,6 +502,13 @@ unsigned int WINAPI IECommandExecutor::WaitThreadProc(LPVOID lpParameter) {
   return 0;
 }
 
+unsigned int WINAPI IECommandExecutor::ScriptWaitThreadProc(LPVOID lpParameter) {
+  LOG(TRACE) << "Entering IECommandExecutor::ScriptWaitThreadProc";
+  HWND window_handle = reinterpret_cast<HWND>(lpParameter);
+  ::Sleep(SCRIPT_WAIT_TIME_IN_MILLISECONDS);
+  ::PostMessage(window_handle, WD_SCRIPT_WAIT, NULL, NULL);
+  return 0;
+}
 
 unsigned int WINAPI IECommandExecutor::ThreadProc(LPVOID lpParameter) {
   LOG(TRACE) << "Entering IECommandExecutor::ThreadProc";
@@ -438,6 +566,10 @@ unsigned int WINAPI IECommandExecutor::ThreadProc(LPVOID lpParameter) {
         LOG(DEBUG) << "Returned from DestroyWindow()";
         break;
       } else {
+        // We need to lock this mutex here to make sure only one thread is processing
+        // win32 messages at a time.
+        static std::mutex messageLock;
+        std::lock_guard<std::mutex> lock(messageLock);
         ::TranslateMessage(&msg);
         ::DispatchMessage(&msg);
       }
@@ -474,19 +606,19 @@ void IECommandExecutor::DispatchCommand() {
               command_type == webdriver::CommandType::SendKeysToAlert ||
               command_type == webdriver::CommandType::AcceptAlert ||
               command_type == webdriver::CommandType::DismissAlert ||
-              command_type == webdriver::CommandType::SetAlertCredentials) {
+              command_type == webdriver::CommandType::SetAlertCredentials ||
+              command_type == webdriver::CommandType::GetCurrentWindowHandle ||
+              command_type == webdriver::CommandType::GetWindowHandles ||
+              command_type == webdriver::CommandType::SwitchToWindow) {
             LOG(DEBUG) << "Alert is detected, and the sent command is valid";
           } else {
             LOG(DEBUG) << "Unexpected alert is detected, and the sent command is invalid when an alert is present";
-            bool is_notify_unexpected_alert =
-                this->unexpected_alert_behavior_.size() == 0 ||
-                this->unexpected_alert_behavior_ == IGNORE_UNEXPECTED_ALERTS ||
-                this->unexpected_alert_behavior_ == DISMISS_AND_NOTIFY_UNEXPECTED_ALERTS ||
-                this->unexpected_alert_behavior_ == ACCEPT_AND_NOTIFY_UNEXPECTED_ALERTS;
+            std::string alert_text;
             bool is_quit_command = command_type == webdriver::CommandType::Quit;
-            std::string alert_text = this->HandleUnexpectedAlert(browser,
-                                                                 alert_handle,
-                                                                 is_quit_command);
+            bool is_notify_unexpected_alert = this->HandleUnexpectedAlert(browser,
+                                                                          alert_handle,
+                                                                          is_quit_command,
+                                                                          &alert_text);
             if (!is_quit_command && is_notify_unexpected_alert) {
               // To keep pace with what Firefox does, we'll return the text of the
               // alert in the error response.
@@ -514,6 +646,16 @@ void IECommandExecutor::DispatchCommand() {
           this->wait_timeout_ = clock() + (static_cast<int>(this->page_load_timeout_) / 1000 * CLOCKS_PER_SEC);
         }
         ::PostMessage(this->m_hWnd, WD_WAIT, NULL, NULL);
+      } else {
+        HWND script_executor_handle = browser->script_executor_handle();
+        this->is_waiting_ = script_executor_handle != NULL;
+        if (this->is_waiting_) {
+          if (this->async_script_timeout_ >= 0) {
+            this->wait_timeout_ = clock() + (static_cast<int>(this->async_script_timeout_) / 1000 * CLOCKS_PER_SEC);
+          }
+          ::PostMessage(this->m_hWnd, WD_SCRIPT_WAIT, NULL, NULL);
+          return;
+        }
       }
     } else {
       if (this->current_command_.command_type() != webdriver::CommandType::Quit) {
@@ -545,12 +687,13 @@ bool IECommandExecutor::IsAlertActive(BrowserHandle browser, HWND* alert_handle)
   return false;
 }
 
-std::string IECommandExecutor::HandleUnexpectedAlert(BrowserHandle browser,
-                                                     HWND alert_handle,
-                                                     bool force_use_dismiss) {
+bool IECommandExecutor::HandleUnexpectedAlert(BrowserHandle browser,
+                                              HWND alert_handle,
+                                              bool force_use_dismiss,
+                                              std::string* alert_text) {
   LOG(TRACE) << "Entering IECommandExecutor::HandleUnexpectedAlert";
   Alert dialog(browser, alert_handle);
-  std::string alert_text = dialog.GetText();
+  *alert_text = dialog.GetText();
   if (this->unexpected_alert_behavior_ == ACCEPT_UNEXPECTED_ALERTS ||
       this->unexpected_alert_behavior_ == ACCEPT_AND_NOTIFY_UNEXPECTED_ALERTS) {
     LOG(DEBUG) << "Automatically accepting the alert";
@@ -570,7 +713,12 @@ std::string IECommandExecutor::HandleUnexpectedAlert(BrowserHandle browser,
       dialog.Accept();
     }
   }
-  return alert_text;
+  bool is_notify_unexpected_alert =
+    this->unexpected_alert_behavior_.size() == 0 ||
+    this->unexpected_alert_behavior_ == IGNORE_UNEXPECTED_ALERTS ||
+    this->unexpected_alert_behavior_ == DISMISS_AND_NOTIFY_UNEXPECTED_ALERTS ||
+    this->unexpected_alert_behavior_ == ACCEPT_AND_NOTIFY_UNEXPECTED_ALERTS;
+  return is_notify_unexpected_alert;
 }
 
 int IECommandExecutor::GetCurrentBrowser(BrowserHandle* browser_wrapper) const {
@@ -650,7 +798,7 @@ int IECommandExecutor::CreateNewBrowser(std::string* error_message) {
   }
 
   // Set persistent hover functionality in the interactions implementation. 
-  this->input_manager_->StartPersistentEvents();
+  //this->input_manager_->StartPersistentEvents();
   LOG(INFO) << "Persistent hovering set to: " << this->input_manager_->use_persistent_hover();
 
   this->proxy_manager_->SetProxySettings(process_window_info.hwndBrowser);
@@ -672,12 +820,12 @@ int IECommandExecutor::GetManagedElement(const std::string& element_id,
   return this->managed_elements_->GetManagedElement(element_id, element_wrapper);
 }
 
-void IECommandExecutor::AddManagedElement(IHTMLElement* element,
+bool IECommandExecutor::AddManagedElement(IHTMLElement* element,
                                           ElementHandle* element_wrapper) {
   LOG(TRACE) << "Entering IECommandExecutor::AddManagedElement";
   BrowserHandle current_browser;
   this->GetCurrentBrowser(&current_browser);
-  this->managed_elements_->AddManagedElement(current_browser, element, element_wrapper);
+  return this->managed_elements_->AddManagedElement(current_browser, element, element_wrapper);
 }
 
 void IECommandExecutor::RemoveManagedElement(const std::string& element_id) {

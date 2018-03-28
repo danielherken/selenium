@@ -26,6 +26,8 @@ import static org.openqa.selenium.firefox.FirefoxOptions.FIREFOX_OPTIONS;
 import com.google.common.collect.ImmutableMap;
 
 import org.junit.Test;
+import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
+import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.ImmutableCapabilities;
 
 import java.util.Map;
@@ -42,7 +44,7 @@ public class FirefoxMutatorTest {
   public void shouldDoNothingIfBrowserNameIsNotFirefox() {
     ImmutableCapabilities caps = new ImmutableCapabilities("browserName", "chrome");
 
-    ImmutableCapabilities seen = new FirefoxMutator(defaultConfig).apply(caps);
+    Capabilities seen = new FirefoxMutator(defaultConfig).apply(caps);
 
     // Make sure we return exactly the same instance of the capabilities, and not just a copy.
     assertSame(caps, seen);
@@ -55,7 +57,7 @@ public class FirefoxMutatorTest {
         "firefox_binary", "cake");
 
     ImmutableCapabilities caps = new ImmutableCapabilities("browserName", "firefox");
-    ImmutableCapabilities seen = new FirefoxMutator(config).apply(caps);
+    Capabilities seen = new FirefoxMutator(config).apply(caps);
 
     assertSame(caps, seen);
   }
@@ -63,7 +65,7 @@ public class FirefoxMutatorTest {
   @Test
   public void shouldInjectBinaryIfNotSpecified() {
     ImmutableCapabilities caps = new ImmutableCapabilities("browserName", "firefox");
-    ImmutableCapabilities seen = new FirefoxMutator(defaultConfig).apply(caps);
+    Capabilities seen = new FirefoxMutator(defaultConfig).apply(caps);
 
     assertEquals(
         seen.getCapability("firefox_binary"),
@@ -83,7 +85,7 @@ public class FirefoxMutatorTest {
         "browserName", "firefox",
         BINARY, "cheese",
         FIREFOX_OPTIONS, ImmutableMap.of());
-    ImmutableCapabilities seen = new FirefoxMutator(defaultConfig).apply(caps);
+    Capabilities seen = new FirefoxMutator(defaultConfig).apply(caps);
 
     assertEquals("cheese", seen.getCapability(BINARY));
 
@@ -98,7 +100,7 @@ public class FirefoxMutatorTest {
     ImmutableCapabilities caps = new ImmutableCapabilities(
         "browserName", "firefox",
         FIREFOX_OPTIONS, ImmutableMap.of("binary", "cheese"));
-    ImmutableCapabilities seen = new FirefoxMutator(defaultConfig).apply(caps);
+    Capabilities seen = new FirefoxMutator(defaultConfig).apply(caps);
 
     assertEquals(defaultConfig.getCapability(BINARY), seen.getCapability(BINARY));
 
@@ -113,8 +115,69 @@ public class FirefoxMutatorTest {
     ImmutableCapabilities caps = new ImmutableCapabilities(
         "browserName", "firefox",
         MARIONETTE, "cheese");
-    ImmutableCapabilities seen = new FirefoxMutator(defaultConfig).apply(caps);
+    Capabilities seen = new FirefoxMutator(defaultConfig).apply(caps);
 
     assertEquals(defaultConfig.getCapability(MARIONETTE), seen.getCapability(MARIONETTE));
+  }
+
+  @Test
+  public void shouldInjectIfConfigUuidMatches() {
+    ImmutableCapabilities defaultConfigWithUuid = new ImmutableCapabilities(
+        "browserName", "firefox",
+        BINARY, "binary",
+        "firefox_profile", "profile",
+        MARIONETTE, true,
+        GridNodeConfiguration.CONFIG_UUID_CAPABILITY, "123");
+    ImmutableCapabilities caps = new ImmutableCapabilities(
+        "browserName", "firefox",
+        MARIONETTE, "cheese",
+        GridNodeConfiguration.CONFIG_UUID_CAPABILITY, "123");
+    Capabilities seen = new FirefoxMutator(defaultConfigWithUuid).apply(caps);
+
+    assertEquals(true, seen.getCapability(MARIONETTE));
+  }
+
+  @Test
+  public void shouldNotInjectIfConfigUuidDoesNotMatch() {
+    ImmutableCapabilities defaultConfigWithUuid = new ImmutableCapabilities(
+        "browserName", "firefox",
+        BINARY, "binary",
+        "firefox_profile", "profile",
+        MARIONETTE, true,
+        GridNodeConfiguration.CONFIG_UUID_CAPABILITY, "uuid");
+    ImmutableCapabilities caps = new ImmutableCapabilities(
+        "browserName", "firefox",
+        MARIONETTE, "cheese",
+        GridNodeConfiguration.CONFIG_UUID_CAPABILITY, "123");
+    Capabilities seen = new FirefoxMutator(defaultConfigWithUuid).apply(caps);
+
+    assertEquals("cheese", seen.getCapability(MARIONETTE));
+  }
+
+  @Test
+  public void shouldNotInjectIfUuidIsPresentInConfigOnly() {
+    ImmutableCapabilities defaultConfigWithUuid = new ImmutableCapabilities(
+        "browserName", "firefox",
+        BINARY, "binary",
+        "firefox_profile", "profile",
+        MARIONETTE, true,
+        GridNodeConfiguration.CONFIG_UUID_CAPABILITY, "uuid");
+    ImmutableCapabilities caps = new ImmutableCapabilities(
+        "browserName", "firefox",
+        MARIONETTE, "cheese");
+    Capabilities seen = new FirefoxMutator(defaultConfigWithUuid).apply(caps);
+
+    assertEquals("cheese", seen.getCapability(MARIONETTE));
+  }
+
+  @Test
+  public void shouldNotInjectIfUuidIsPresentInPayloadOnly() {
+    ImmutableCapabilities caps = new ImmutableCapabilities(
+        "browserName", "firefox",
+        MARIONETTE, "cheese",
+        GridNodeConfiguration.CONFIG_UUID_CAPABILITY, "123");
+    Capabilities seen = new FirefoxMutator(defaultConfig).apply(caps);
+
+    assertEquals("cheese", seen.getCapability(MARIONETTE));
   }
 }

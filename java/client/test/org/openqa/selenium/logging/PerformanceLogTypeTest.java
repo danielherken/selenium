@@ -25,7 +25,7 @@ import static org.junit.Assume.assumeTrue;
 import static org.openqa.selenium.testing.Driver.HTMLUNIT;
 import static org.openqa.selenium.testing.Driver.IE;
 import static org.openqa.selenium.testing.Driver.MARIONETTE;
-import static org.openqa.selenium.testing.Driver.PHANTOMJS;
+import static org.openqa.selenium.testing.Driver.SAFARI;
 import static org.openqa.selenium.testing.TestUtilities.isChrome;
 import static org.openqa.selenium.testing.TestUtilities.isOldChromedriver;
 
@@ -46,8 +46,8 @@ import java.util.logging.Level;
 
 @Ignore(HTMLUNIT)
 @Ignore(IE)
-@Ignore(PHANTOMJS)
 @Ignore(MARIONETTE)
+@Ignore(SAFARI)
 public class PerformanceLogTypeTest extends JUnit4TestBase {
 
   private WebDriver localDriver;
@@ -72,7 +72,7 @@ public class PerformanceLogTypeTest extends JUnit4TestBase {
     LoggingPreferences logPrefs = new LoggingPreferences();
     logPrefs.enable(LogType.PERFORMANCE, Level.INFO);
     Capabilities caps = new ImmutableCapabilities(CapabilityType.LOGGING_PREFS, logPrefs);
-    localDriver = new WebDriverBuilder().setDesiredCapabilities(caps).get();
+    localDriver = new WebDriverBuilder().get(caps);
   }
 
   @Test

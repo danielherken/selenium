@@ -24,24 +24,26 @@ import org.openqa.selenium.ImmutableCapabilities;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 
-public class ChromeMutator implements Function<ImmutableCapabilities, ImmutableCapabilities> {
+public class ChromeMutator implements Function<Capabilities, Capabilities> {
 
-  private final Object binary;
+  private static final String CONFIG_UUID_CAPABILITY = "server:CONFIG_UUID";
+
+  private final Capabilities config;
 
   public ChromeMutator(Capabilities config) {
-    if ("chrome".equals(config.getBrowserName())) {
-      this.binary = config.getCapability("chrome_binary");
-    } else {
-      this.binary = null;
-    }
+    this.config = "chrome".equals(config.getBrowserName()) ? config : null;
   }
 
   @Override
-  public ImmutableCapabilities apply(ImmutableCapabilities capabilities) {
-    if (binary == null ||
-        !"chrome".equals(capabilities.getBrowserName())) {
+  public Capabilities apply(Capabilities capabilities) {
+    if (config == null || !"chrome".equals(capabilities.getBrowserName())) {
+      return capabilities;
+    }
+    if (!Objects.equals(config.getCapability(CONFIG_UUID_CAPABILITY),
+                        capabilities.getCapability(CONFIG_UUID_CAPABILITY))) {
       return capabilities;
     }
 
@@ -55,8 +57,8 @@ public class ChromeMutator implements Function<ImmutableCapabilities, ImmutableC
       options.putAll(asMap);
     }
 
-    if (!(options.get("binary") instanceof String)) {
-      options.put("binary", binary);
+    if (options.get("binary") == null && config.getCapability("chrome_binary") != null) {
+      options.put("binary", config.getCapability("chrome_binary"));
     }
 
     toReturn.put(CAPABILITY, options);

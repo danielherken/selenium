@@ -21,6 +21,7 @@ import net.jcip.annotations.ThreadSafe;
 
 import org.openqa.grid.internal.listeners.RegistrationListener;
 import org.openqa.grid.internal.listeners.SelfHealingProxy;
+import org.openqa.grid.internal.utils.configuration.GridHubConfiguration;
 import org.openqa.grid.web.Hub;
 import org.openqa.grid.web.servlet.handler.RequestHandler;
 import org.openqa.selenium.remote.DesiredCapabilities;
@@ -87,16 +88,6 @@ public class DefaultGridRegistry extends BaseGridRegistry implements GridRegistr
   }
 
   /**
-   * Creates a new {@link GridRegistry} that is not associated with a Hub and starts it.
-   *
-   * @return the registry
-   */
-  @SuppressWarnings({"NullableProblems"})
-  public static GridRegistry newInstance() {
-    return newInstance(null);
-  }
-
-  /**
    * Creates a new {@link GridRegistry} and starts it.
    *
    * @param hub the {@link Hub} to associate this registry with
@@ -118,11 +109,8 @@ public class DefaultGridRegistry extends BaseGridRegistry implements GridRegistr
    * @param reason  the reason for termination
    */
   public void terminate(final TestSession session, final SessionTerminationReason reason) {
-    new Thread(new Runnable() { // Thread safety reviewed
-      public void run() {
-        _release(session.getSlot(), reason);
-      }
-    }).start();
+    // Thread safety reviewed
+    new Thread(() -> _release(session.getSlot(), reason)).start();
   }
 
   /**
@@ -168,9 +156,7 @@ public class DefaultGridRegistry extends BaseGridRegistry implements GridRegistr
           "Cleaning up stale test sessions on the unregistered node %s", proxy));
 
       final RemoteProxy p = proxies.remove(proxy);
-      for (TestSlot slot : p.getTestSlots()) {
-        forceRelease(slot, SessionTerminationReason.PROXY_REREGISTRATION);
-      }
+      p.getTestSlots().forEach(testSlot -> forceRelease(testSlot, SessionTerminationReason.PROXY_REREGISTRATION) );
       p.teardown();
     }
   }
@@ -219,8 +205,6 @@ public class DefaultGridRegistry extends BaseGridRegistry implements GridRegistr
     matcherThread.interrupt();
     newSessionQueue.stop();
     proxies.teardown();
-    httpClientFactory.close();
-
   }
 
   /**
@@ -249,7 +233,9 @@ public class DefaultGridRegistry extends BaseGridRegistry implements GridRegistr
       try {
         testSessionAvailable.await(5, TimeUnit.SECONDS);
 
-        newSessionQueue.processQueue(this::takeRequestHandler, configuration.prioritizer);
+        newSessionQueue.processQueue(
+            this::takeRequestHandler,
+            getHub().getConfiguration().prioritizer);
         // Just make sure we delete anything that is logged on this thread from memory
         LoggingManager.perSessionLogHandler().clearThreadTempLogs();
       } catch (InterruptedException e) {

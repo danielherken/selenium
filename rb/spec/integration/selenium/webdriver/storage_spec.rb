@@ -20,8 +20,8 @@ require_relative 'spec_helper'
 module Selenium
   module WebDriver
     module DriverExtensions
-      describe HasWebStorage, only: {browser: %i[chrome firefox]} do
-        shared_examples_for 'web storage' do
+      describe HasWebStorage, only: {browser: %i[chrome ie firefox]} do
+        shared_examples 'web storage' do
           before do
             driver.navigate.to url_for('clicks.html')
             storage.clear
@@ -30,9 +30,10 @@ module Selenium
           it 'can get and set items' do
             expect(storage).to be_empty
             storage['foo'] = 'bar'
-            expect(storage['foo']).to eq('bar')
 
+            expect(storage['foo']).to eq('bar')
             storage['foo1'] = 'bar1'
+
             expect(storage['foo1']).to eq('bar1')
 
             expect(storage.size).to eq(2)

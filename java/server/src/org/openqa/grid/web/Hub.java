@@ -17,11 +17,10 @@
 
 package org.openqa.grid.web;
 
-import com.google.common.collect.Maps;
-
 import org.openqa.grid.common.exception.GridConfigurationException;
 import org.openqa.grid.internal.GridRegistry;
 import org.openqa.grid.internal.utils.configuration.GridHubConfiguration;
+import org.openqa.grid.shared.Stoppable;
 import org.openqa.grid.web.servlet.DisplayHelpServlet;
 import org.openqa.grid.web.servlet.DriverServlet;
 import org.openqa.grid.web.servlet.Grid1HeartbeatServlet;
@@ -32,9 +31,13 @@ import org.openqa.grid.web.servlet.ProxyStatusServlet;
 import org.openqa.grid.web.servlet.RegistrationServlet;
 import org.openqa.grid.web.servlet.ResourceServlet;
 import org.openqa.grid.web.servlet.TestSessionStatusServlet;
-import org.openqa.grid.web.servlet.beta.ConsoleServlet;
+import org.openqa.grid.web.servlet.console.ConsoleServlet;
 import org.openqa.grid.web.utils.ExtraServletUtil;
+import org.openqa.selenium.json.Json;
 import org.openqa.selenium.net.NetworkUtils;
+import org.openqa.selenium.remote.server.jmx.JMXHelper;
+import org.openqa.selenium.remote.server.jmx.ManagedAttribute;
+import org.openqa.selenium.remote.server.jmx.ManagedService;
 import org.seleniumhq.jetty9.server.HttpConfiguration;
 import org.seleniumhq.jetty9.server.HttpConnectionFactory;
 import org.seleniumhq.jetty9.server.Server;
@@ -43,8 +46,10 @@ import org.seleniumhq.jetty9.servlet.ServletContextHandler;
 import org.seleniumhq.jetty9.servlet.ServletHolder;
 import org.seleniumhq.jetty9.util.thread.QueuedThreadPool;
 
+import java.net.BindException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -54,13 +59,14 @@ import javax.servlet.Servlet;
  * Jetty server. Main entry point for everything about the grid. <p> Except for unit tests, this
  * should be a singleton.
  */
-public class Hub {
+@ManagedService(objectName = "org.seleniumhq.grid:type=Hub", description = "Selenium Grid Hub")
+public class Hub implements Stoppable {
 
   private static final Logger log = Logger.getLogger(Hub.class.getName());
 
-  private GridHubConfiguration config;
+  private final GridHubConfiguration config;
   private final GridRegistry registry;
-  private final Map<String, Class<? extends Servlet>> extraServlet = Maps.newHashMap();
+  private final Map<String, Class<? extends Servlet>> extraServlet = new HashMap<>();
 
   private Server server;
 
@@ -78,7 +84,7 @@ public class Hub {
   }
 
   public Hub(GridHubConfiguration gridHubConfiguration) {
-    config = gridHubConfiguration;
+    config = gridHubConfiguration == null ? new GridHubConfiguration() : gridHubConfiguration;
 
     try {
       registry = (GridRegistry) Class.forName(config.registry).newInstance();
@@ -110,6 +116,8 @@ public class Hub {
 
     // start the registry, now that 'config' is all setup
     registry.start();
+
+    new JMXHelper().register(this);
   }
 
   private void addDefaultServlets(ServletContextHandler handler) {
@@ -167,8 +175,6 @@ public class Hub {
       httpConfig.setSecureScheme("https");
       httpConfig.setSecurePort(config.port);
 
-      log.info("Will listen on " + config.port);
-
       ServerConnector http = new ServerConnector(server, new HttpConnectionFactory(httpConfig));
       http.setPort(config.port);
 
@@ -196,16 +202,45 @@ public class Hub {
     return config;
   }
 
+  @ManagedAttribute(name = "Configuration")
+  public Map<?,?> getConfigurationForJMX() {
+    Json json = new Json();
+    return json.toType(json.toJson(config.toJson()), Map.class);
+  }
+
   public void start() throws Exception {
     initServer();
-    server.start();
+
+    try {
+      server.start();
+    } catch (Exception e) {
+      try {
+        stop();
+      } catch (Exception ignore) {
+      }
+      if (e instanceof BindException) {
+        log.severe(String.format(
+            "Port %s is busy, please choose a free port for the hub and specify it using -port option", config.port));
+        return;
+      } else {
+        throw new RuntimeException(e);
+      }
+    }
+
+    log.info("Selenium Grid hub is up and running");
+    log.info(String.format("Nodes should register to %s", getRegistrationURL()));
+    log.info(String.format("Clients should connect to %s", getWebDriverHubRequestURL()));
   }
 
-  public void stop() throws Exception {
+  public void stop() {
     registry.stop();
-    server.stop();
+    try {
+      server.stop();
+    } catch (Exception ignore) {
+    }
   }
 
+  @ManagedAttribute(name= "URL")
   public URL getUrl() {
     return getUrl("");
   }
@@ -231,6 +266,11 @@ public class Hub {
 
   public URL getConsoleURL() {
     return getUrl("/grid/console");
+  }
+
+  @ManagedAttribute(name = "NewSessionRequestCount")
+  public int getNewSessionRequestCount() {
+    return getRegistry().getNewSessionRequestCount();
   }
 
 }

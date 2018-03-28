@@ -1,3 +1,79 @@
+v3.11.0
+=======
+
+* Implemented `equals` and `hashCode` for `LoggingPreferences`
+* Deleted deprecated methods from `*Options` and `MutableCapabilities`
+* Converting an object to JSON now doesn't include the object's hash
+  code.
+* Removed deprecated methods from `RemoteWebDriver`.
+* Switching Grid to use OkHttp rather than the Apache HttpClient.
+* Internal change to better use Selenium's abstractions for handing
+  JSON in Grid.
+* Removed deprecated `GridRegistry.getHttpClientFactory` method.
+* Removed `Registry.getConfiguration`
+
+v3.10.0
+=======
+
+* Deprecate internal Duration in favor of java.time.Duration
+* Fix handling of IE capabilities in Grid Nodes. Fixes #5502
+* Fix problem where Grid wasn't starting Safari sessions
+* Migrate Selenium Grid to reduce exporting GSON and Apache HttpClient
+  as much to public APIs.
+* Migrate Grid to use Selenium's own abstractions where possible. This
+  means that more of it is using OkHttp rather than the Apache
+  HttpClient.
+* Fix an issue where RemoteProxy instances were causing an exception
+  to be thrown if they weren't marked as a ManagedService.
+* Deleting ability to run html suites with selenium-server-standalone,
+  users are adviced to use htmlrunner
+
+v3.9.1
+======
+
+* OkHttp backed instances can now connect to servers requiring
+  authorisation. Based on PR #5444 proposed by @valfirst.
+
+v3.9.0
+======
+
+* Switched to OkHttp for all HTTP communication. The version used can
+  be changed back to the Apache HttpClient by setting the
+  `webdriver.http.factory` system property to `apache`.
+* Removed passthrough mode for the server.
+* Grid: (implementation note) Start migrating servlets used to be
+  command handlers.
+* Upgraded every dependency to latest versions.
+* Added varargs methods to `ExpectedConditions` in order to avoid
+  annoying `Arrays.asList`.
+* Better logging when new session creation errors.
+
+v3.8.1
+======
+
+* Fixed Chrome mutator injecting null binary path into new session payload.
+* Added mutator that stips grid-specific capabilities hurting IE driver.
+* Fixed SafariOptions construction from plain Capabilities object.
+
+v3.8.0
+======
+
+* Dropped support for PhantomJS, it's recommended to use headless Firefox or
+  Chrome instead.
+* Node skips configurations that does not match current platform, no more IE
+  slots on Linux-based nodes.
+* Introduced unique ids for node slot configurations. Hub injects UID of the
+  matched configuration to the new request payload. Node mutates capabilities
+  with matching config UUID only. This allows to have multiple configurations
+  for the same browser in node config file.
+* Implemented matching of some browser-specific capabilities on Grid hub,
+  namely "marionette" for Firefox (default is true) and "technologyPreview"
+  for Safari (default is false).
+* "technologyPreview" capability is now honored again by SafariDriver.
+* Added initial support for managing Grid Hubs and Nodes via JMX
+* Removed `Alert.authenticate` and supporting classes
+* Better handling of configuring SafariDriver via capabilities.
+
 v3.7.1
 ======
 

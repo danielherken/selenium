@@ -32,7 +32,6 @@ import static org.openqa.selenium.testing.Driver.FIREFOX;
 import static org.openqa.selenium.testing.Driver.HTMLUNIT;
 import static org.openqa.selenium.testing.Driver.IE;
 import static org.openqa.selenium.testing.Driver.MARIONETTE;
-import static org.openqa.selenium.testing.Driver.PHANTOMJS;
 import static org.openqa.selenium.testing.Driver.SAFARI;
 import static org.openqa.selenium.testing.TestUtilities.catchThrowable;
 import static org.openqa.selenium.testing.TestUtilities.getFirefoxVersion;
@@ -52,7 +51,6 @@ import org.openqa.selenium.testing.SwitchToTopAfterTest;
 import java.util.Set;
 
 @Ignore(value = CHROME, reason = "https://bugs.chromium.org/p/chromedriver/issues/detail?id=1500")
-@Ignore(PHANTOMJS)
 @Ignore(SAFARI)
 public class AlertsTest extends JUnit4TestBase {
 
@@ -112,7 +110,6 @@ public class AlertsTest extends JUnit4TestBase {
   }
 
   @Test
-  @NotYetImplemented(HTMLUNIT)
   public void testShouldThrowIllegalArgumentExceptionWhenKeysNull() {
     driver.get(alertPage("cheese"));
 
@@ -544,6 +541,7 @@ public class AlertsTest extends JUnit4TestBase {
 
   @Test
   @Ignore(CHROME)
+  @Ignore(value = HTMLUNIT, reason = "https://github.com/SeleniumHQ/htmlunit-driver/issues/57")
   @NotYetImplemented(value = MARIONETTE,
       reason = "https://bugzilla.mozilla.org/show_bug.cgi?id=1279211")
   public void testIncludesAlertTextInUnhandledAlertException() {

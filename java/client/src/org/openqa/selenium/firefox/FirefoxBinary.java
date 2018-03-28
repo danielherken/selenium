@@ -28,8 +28,6 @@ import org.openqa.selenium.remote.service.DriverService;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.WebDriverException;
@@ -45,7 +43,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -92,8 +92,8 @@ public class FirefoxBinary {
   private static final String PATH_PREFIX = "/" +
       FirefoxBinary.class.getPackage().getName().replace(".", "/") + "/";
 
-  private final Map<String, String> extraEnv = Maps.newHashMap();
-  private final List<String> extraOptions = Lists.newArrayList();
+  private final Map<String, String> extraEnv = new HashMap<>();
+  private final List<String> extraOptions = new ArrayList<>();
   private final Executable executable;
   private CommandLine process;
   private OutputStream stream;
@@ -148,8 +148,6 @@ public class FirefoxBinary {
    *     .usingFirefoxBinary(new FirefoxBinary(new File("path/to/firefox.exe")))
    *     .withEnvironment(ImmutableMap.of("DISPLAY", "0:0"))
    *     .build());
-   * @param propertyName
-   * @param value
    */
   @Deprecated
   public void setEnvironmentProperty(String propertyName, String value) {
@@ -162,7 +160,7 @@ public class FirefoxBinary {
   }
 
   public void addCommandLineOptions(String... options) {
-    extraOptions.addAll(Lists.newArrayList(options));
+    Collections.addAll(extraOptions, options);
   }
 
   void amendOptions(FirefoxOptions options) {
@@ -185,9 +183,9 @@ public class FirefoxBinary {
       modifyLinkLibraryPath(profileDir);
     }
 
-    List<String> cmdArray = Lists.newArrayList();
+    List<String> cmdArray = new ArrayList<>();
     cmdArray.addAll(extraOptions);
-    cmdArray.addAll(Lists.newArrayList(commandLineFlags));
+    Collections.addAll(cmdArray, commandLineFlags);
     CommandLine command = new CommandLine(getPath(), Iterables.toArray(cmdArray, String.class));
     command.setEnvironmentVariables(getExtraEnv());
     command.updateDynamicLibraryPath(getExtraEnv().get(CommandLine.getLibraryPathPropertyName()));
@@ -207,7 +205,7 @@ public class FirefoxBinary {
     startFirefoxProcess(command);
   }
 
-  protected void startFirefoxProcess(CommandLine command) throws IOException {
+  protected void startFirefoxProcess(CommandLine command) {
     process = command;
     command.executeAsync();
   }
@@ -293,12 +291,8 @@ public class FirefoxBinary {
   /**
    * Waits for the process to execute, returning the command output taken from the profile's
    * execution.
-   *
-   * @throws InterruptedException if we are interrupted while waiting for the process to launch
-   * @throws IOException if there is a problem with reading the input stream of the launching
-   *         process
    */
-  public void waitFor() throws InterruptedException, IOException {
+  public void waitFor() {
     process.waitFor();
   }
 
@@ -307,12 +301,9 @@ public class FirefoxBinary {
    * execution.
    *
    * @param timeout the maximum time to wait in milliseconds
-   * @throws InterruptedException if we are interrupted while waiting for the process to launch
-   * @throws IOException if there is a problem with reading the input stream of the launching
-   *         process
    */
 
-  public void waitFor(long timeout) throws InterruptedException, IOException {
+  public void waitFor(long timeout) {
 	  process.waitFor(timeout);
   }
 
@@ -320,9 +311,8 @@ public class FirefoxBinary {
    * Gets all console output of the binary. Output retrieval is non-destructive and non-blocking.
    *
    * @return the console output of the executed binary.
-   * @throws IOException IO exception reading from the output stream of the firefox process
    */
-  public String getConsoleOutput() throws IOException {
+  public String getConsoleOutput() {
     if (process == null) {
       return null;
     }

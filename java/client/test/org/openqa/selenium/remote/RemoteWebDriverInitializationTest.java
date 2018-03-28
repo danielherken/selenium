@@ -22,7 +22,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -40,19 +40,7 @@ import java.io.IOException;
 
 @RunWith(JUnit4.class)
 public class RemoteWebDriverInitializationTest {
-  private boolean stopClientCalled = false;
   private boolean quitCalled = false;
-
-  @Test
-  public void testStopsClientIfStartClientFails() {
-    Throwable ex = TestUtilities.catchThrowable(
-        () -> new BadStartClientRemoteWebDriver(mock(CommandExecutor.class),
-                                                new ImmutableCapabilities()));
-
-    assertNotNull(ex);
-    assertThat(ex.getMessage(), containsString("Stub client that should fail"));
-    assertTrue(stopClientCalled);
-  }
 
   @Test
   public void testQuitsIfStartSessionFails() {
@@ -73,23 +61,6 @@ public class RemoteWebDriverInitializationTest {
     when(executor.execute(any())).thenReturn(resp);
     RemoteWebDriver driver = new RemoteWebDriver(executor, new ImmutableCapabilities());
     assertThat(driver.getCapabilities().getCapability("platform"), equalTo(Platform.UNIX));
-  }
-
-  private class BadStartClientRemoteWebDriver extends RemoteWebDriver {
-    public BadStartClientRemoteWebDriver(CommandExecutor executor,
-                                         Capabilities desiredCapabilities) {
-      super(executor, desiredCapabilities);
-    }
-
-    @Override
-    protected void startClient() {
-      throw new RuntimeException("Stub client that should fail");
-    }
-
-    @Override
-    protected void stopClient() {
-      stopClientCalled = true;
-    }
   }
 
   private class BadStartSessionRemoteWebDriver extends RemoteWebDriver {

@@ -17,13 +17,13 @@
 
 package org.openqa.selenium.remote.http;
 
-import static com.google.common.base.Charsets.UTF_8;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.net.HttpHeaders.CACHE_CONTROL;
 import static com.google.common.net.HttpHeaders.CONTENT_LENGTH;
 import static com.google.common.net.HttpHeaders.CONTENT_TYPE;
 import static com.google.common.net.MediaType.JSON_UTF_8;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.openqa.selenium.json.Json.MAP_TYPE;
 import static org.openqa.selenium.remote.DriverCommand.ADD_COOKIE;
 import static org.openqa.selenium.remote.DriverCommand.CLEAR_ELEMENT;
@@ -97,7 +97,6 @@ import com.google.common.base.Objects;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
 
 import org.openqa.selenium.UnsupportedCommandException;
 import org.openqa.selenium.json.Json;
@@ -153,7 +152,7 @@ public abstract class AbstractHttpCommandCodec implements CommandCodec<HttpReque
 
     defineCommand(UPLOAD_FILE, post("/session/:sessionId/file"));
     defineCommand(SCREENSHOT, get("/session/:sessionId/screenshot"));
-    defineCommand(ELEMENT_SCREENSHOT, get("/session/:sessionId/screenshot/:id"));
+    defineCommand(ELEMENT_SCREENSHOT, get("/session/:sessionId/element/:id/screenshot"));
     defineCommand(GET_TITLE, get("/session/:sessionId/title"));
 
     defineCommand(FIND_ELEMENT, post("/session/:sessionId/element"));
@@ -261,7 +260,7 @@ public abstract class AbstractHttpCommandCodec implements CommandCodec<HttpReque
       throw new UnsupportedCommandException(
           encodedCommand.getMethod() + " " + encodedCommand.getUri());
     }
-    Map<String, Object> parameters = Maps.newHashMap();
+    Map<String, Object> parameters = new HashMap<>();
     spec.parsePathParameters(parts, parameters);
 
     String content = encodedCommand.getContentString();

@@ -22,7 +22,7 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
@@ -71,7 +71,7 @@ public class WebDriverWaitTest {
     WebDriver testDriver = mock(WebDriver.class, withSettings().extraInterfaces(WrapsDriver.class));
     when(((WrapsDriver) testDriver).getWrappedDriver()).thenReturn(driver);
 
-    TickingClock clock = new TickingClock(200);
+    TickingClock clock = new TickingClock();
     WebDriverWait wait = new WebDriverWait(testDriver, clock, clock, 1, 200);
 
     Throwable ex = catchThrowable(() -> wait.until((d) -> false));
@@ -83,7 +83,7 @@ public class WebDriverWaitTest {
 
   @Test
   public void shouldThrowAnExceptionIfTheTimerRunsOut() {
-    TickingClock clock = new TickingClock(200);
+    TickingClock clock = new TickingClock();
     WebDriverWait wait = new WebDriverWait(mockDriver, clock, clock, 1, 200);
 
     Throwable ex = catchThrowable(() -> wait.until((d) -> false));
@@ -99,7 +99,7 @@ public class WebDriverWaitTest {
         .thenThrow(new NoSuchElementException("foo"))
         .thenReturn(mockElement);
 
-    TickingClock clock = new TickingClock(500);
+    TickingClock clock = new TickingClock();
     Wait<WebDriver> wait = new WebDriverWait(mockDriver, clock, clock, 5, 500);
     assertSame(mockElement, wait.until(condition));
   }
@@ -112,7 +112,7 @@ public class WebDriverWaitTest {
         .thenThrow(new NoSuchFrameException("foo"))
         .thenReturn(mockElement);
 
-    TickingClock clock = new TickingClock(500);
+    TickingClock clock = new TickingClock();
     Wait<WebDriver> wait = new WebDriverWait(mockDriver, clock, clock, 5, 500);
     wait.until(condition);
   }
@@ -126,7 +126,7 @@ public class WebDriverWaitTest {
         .thenThrow(new NoSuchWindowException("foo"))
         .thenReturn(mockElement);
 
-    TickingClock clock = new TickingClock(500);
+    TickingClock clock = new TickingClock();
     Wait<WebDriver> wait = new WebDriverWait(mockDriver, clock, clock, 5, 500);
     wait.until(condition);
   }

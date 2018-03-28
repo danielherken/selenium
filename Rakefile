@@ -20,6 +20,7 @@ require 'rake-tasks/crazy_fun/mappings/export'
 require 'rake-tasks/crazy_fun/mappings/folder'
 require 'rake-tasks/crazy_fun/mappings/gcc'
 require 'rake-tasks/crazy_fun/mappings/javascript'
+require 'rake-tasks/crazy_fun/mappings/jruby'
 require 'rake-tasks/crazy_fun/mappings/mozilla'
 require 'rake-tasks/crazy_fun/mappings/python'
 require 'rake-tasks/crazy_fun/mappings/rake'
@@ -38,21 +39,21 @@ require 'rake-tasks/ie_code_generator'
 require 'rake-tasks/ci'
 require 'rake-tasks/copyright'
 
-$DEBUG = orig_verbose != :default ? true : false
+$DEBUG = orig_verbose != Rake::FileUtilsExt::DEFAULT ? true : false
 if (ENV['debug'] == 'true')
   $DEBUG = true
 end
 verbose($DEBUG)
 
 def release_version
-  "3.7"
+  "3.11"
 end
 
 def version
-  "#{release_version}.1"
+  "#{release_version}.0"
 end
 
-ide_version = "2.8.0"
+ide_version = "2.9.1"
 
 # The build system used by webdriver is layered on top of rake, and we call it
 # "crazy fun" for no readily apparent reason.
@@ -75,6 +76,7 @@ ExportMappings.new.add_all(crazy_fun)
 FolderMappings.new.add_all(crazy_fun)
 GccMappings.new.add_all(crazy_fun)
 JavascriptMappings.new.add_all(crazy_fun)
+JRubyMappings.new.add_all(crazy_fun)
 MozillaMappings.new.add_all(crazy_fun)
 PythonMappings.new.add_all(crazy_fun)
 RakeMappings.new.add_all(crazy_fun)
@@ -197,7 +199,7 @@ task :test_ie => [
   "//java/client/test/org/openqa/selenium/ie:ie:run"
 ]
 task :test_jobbie => [ :test_ie ]
-task :test_firefox => [ "//java/client/test/org/openqa/selenium/firefox:test-synthesized:run" ]
+task :test_firefox => [ "//java/client/test/org/openqa/selenium/firefox:marionette:run" ]
 task :test_opera => [ "//java/client/test/org/openqa/selenium/opera:opera:run" ]
 task :test_remote_server => [
    '//java/server/test/org/openqa/selenium/remote/server:small-tests:run',
@@ -211,7 +213,6 @@ task :test_remote => [
   :test_remote_server
 ]
 task :test_safari => [ "//java/client/test/org/openqa/selenium/safari:safari:run" ]
-task :test_phantomjs => [ "//java/client/test/org/openqa/selenium/phantomjs:phantomjs:run" ]
 task :test_support => [
   "//java/client/test/org/openqa/selenium/lift:lift:run",
   "//java/client/test/org/openqa/selenium/support:small-tests:run",
@@ -257,6 +258,8 @@ task :test_java_small_tests => [
   "//java/client/test/org/openqa/selenium/support:small-tests:run",
   "//java/client/test/org/openqa/selenium/remote:common-tests:run",
   "//java/client/test/org/openqa/selenium/remote:client-tests:run",
+  "//java/server/test/org/openqa/grid/selenium/node:node:run",
+  "//java/server/test/org/openqa/grid/selenium/proxy:proxy:run",
   "//java/server/test/org/openqa/selenium/remote/server:small-tests:run",
   "//java/server/test/org/openqa/selenium/remote/server/log:test:run",
 ]
@@ -266,7 +269,6 @@ task :test_rb => ["//rb:unit-test", :test_rb_local, :test_rb_remote]
 task :test_rb_local => [
   "//rb:chrome-test",
   "//rb:firefox-test",
-  "//rb:phantomjs-test",
   ("//rb:ff-esr-test" if ENV['FF_ESR_BINARY']),
   ("//rb:safari-preview-test" if mac?),
   ("//rb:safari-test" if mac?),
@@ -277,7 +279,6 @@ task :test_rb_local => [
 task :test_rb_remote => [
   "//rb:remote-chrome-test",
   "//rb:remote-firefox-test",
-  "//rb:remote-phantomjs-test",
   ("//rb:remote-ff-esr-test" if ENV['FF_ESR_BINARY']),
   ("//rb:remote-safari-preview-test" if mac?),
   ("//rb:remote-safari-test" if mac?),
@@ -373,7 +374,7 @@ task :py_prep_for_install_release => [
   "//py:prep"
 ]
 
-task :py_docs => "//py:docs"
+task :py_docs => ["//py:init", "//py:docs"]
 
 task :py_install =>  "//py:install"
 
@@ -452,7 +453,7 @@ end
 task :'maven-dry-run' => JAVA_RELEASE_TARGETS do |t|
   t.prerequisites.each do |p|
     if JAVA_RELEASE_TARGETS.include?(p)
-      Buck::buck_cmd.call('publish', ['--dry-run', '--remote-repo', 'https://oss.sonatype.org/service/local/staging/deploy/maven2', p])
+      Buck::buck_cmd('publish', ['--dry-run', '--remote-repo', 'https://oss.sonatype.org/service/local/staging/deploy/maven2', p])
     end
   end
 end
@@ -501,7 +502,7 @@ task :'publish-maven' => JAVA_RELEASE_TARGETS do
   creds = read_user_pass_from_m2_settings()
   JAVA_RELEASE_TARGETS.each do |p|
     if JAVA_RELEASE_TARGETS.include?(p)
-      Buck::buck_cmd.call('publish', ['--remote-repo', 'https://oss.sonatype.org/service/local/staging/deploy/maven2', '--include-source', '--include-docs', '-u', creds[0], '-p', creds[1], '--signing-passphrase', passphrase, p])
+      Buck::buck_cmd('publish', ['--stamp-build=detect', '--remote-repo', 'https://oss.sonatype.org/service/local/staging/deploy/maven2', '--include-source', '--include-docs', '-u', creds[0], '-p', creds[1], '--signing-passphrase', passphrase, p])
     end
   end
 end
@@ -509,7 +510,7 @@ end
 task :'maven-install' do
   JAVA_RELEASE_TARGETS.each do |p|
     if JAVA_RELEASE_TARGETS.include?(p)
-      Buck::buck_cmd.call('publish', ['--remote-repo', "file://#{ENV['HOME']}/.m2/repository", '--include-source', '--include-docs', p])
+      Buck::buck_cmd('publish', ['--stamp-build=detect', '--remote-repo', "file://#{ENV['HOME']}/.m2/repository", '--include-source', '--include-docs', p])
     end
   end
 end
@@ -623,6 +624,6 @@ end
 
 at_exit do
   if File.exist?(".git") && !Platform.windows?
-    sh "sh .git-fixfiles"
+    system "sh", ".git-fixfiles"
   end
 end

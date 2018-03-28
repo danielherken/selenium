@@ -18,7 +18,10 @@
 package org.openqa.selenium.remote;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.openqa.selenium.json.Json.LIST_OF_MAPS_TYPE;
 import static org.openqa.selenium.json.Json.MAP_TYPE;
+import static org.openqa.selenium.remote.CapabilityType.PLATFORM;
+import static org.openqa.selenium.remote.CapabilityType.PLATFORM_NAME;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -29,7 +32,6 @@ import com.google.common.collect.Sets;
 import com.google.common.io.CharSource;
 import com.google.common.io.CharStreams;
 import com.google.common.io.FileBackedOutputStream;
-import com.google.gson.reflect.TypeToken;
 
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.ImmutableCapabilities;
@@ -66,15 +68,12 @@ import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Predicate;
-import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 
 public class NewSessionPayload implements Closeable {
-
-  private static final Logger LOG = Logger.getLogger(NewSessionPayload.class.getName());
 
   private final Set<CapabilitiesFilter> adapters;
   private final Set<CapabilityTransform> transforms;
@@ -219,21 +218,22 @@ public class NewSessionPayload implements Closeable {
 
       Map<String, Object> first = getOss();
       if (first == null) {
-        first = stream().findFirst()
+        //noinspection unchecked
+        first = (Map<String, Object>) stream().findFirst()
             .orElse(new ImmutableCapabilities())
             .asMap();
       }
 
       // Write the first capability we get as the desired capability.
       json.name("desiredCapabilities");
-      json.write(first, MAP_TYPE);
+      json.write(first);
 
       // And write the first capability for gecko13
       json.name("capabilities");
       json.beginObject();
 
       json.name("desiredCapabilities");
-      json.write(first, MAP_TYPE);
+      json.write(first);
 
       // Then write everything into the w3c payload. Because of the way we do this, it's easiest
       // to just populate the "firstMatch" section. The spec says it's fine to omit the
@@ -241,7 +241,7 @@ public class NewSessionPayload implements Closeable {
       json.name("firstMatch");
       json.beginArray();
       //noinspection unchecked
-      getW3C().forEach(map -> json.write(map, MAP_TYPE));
+      getW3C().forEach(map -> json.write(map));
       json.endArray();
 
       json.endObject();  // Close "capabilities" object
@@ -268,7 +268,7 @@ public class NewSessionPayload implements Closeable {
 
           default:
             out.name(name);
-            out.write(input.<Object>read(Object.class), Object.class);
+            out.write(input.<Object>read(Object.class));
             break;
         }
       }
@@ -307,7 +307,7 @@ public class NewSessionPayload implements Closeable {
    * equivalent W3C capabilities isn't particularly easy, so it's hoped that this approach gives us
    * the most compatible implementation.
    */
-  public Stream<ImmutableCapabilities> stream() throws IOException {
+  public Stream<Capabilities> stream() throws IOException {
     // OSS first
     Stream<Map<String, Object>> oss = Stream.of(getOss());
 
@@ -425,8 +425,8 @@ public class NewSessionPayload implements Closeable {
     toReturn.putAll(capabilities);
 
     // Platform name
-    if (capabilities.containsKey("platform") && !capabilities.containsKey("platformName")) {
-      toReturn.put("platformName", String.valueOf(capabilities.get("platform")));
+    if (capabilities.containsKey(PLATFORM) && !capabilities.containsKey(PLATFORM_NAME)) {
+      toReturn.put(PLATFORM_NAME, String.valueOf(capabilities.get(PLATFORM)));
     }
 
     return toReturn;
@@ -470,7 +470,7 @@ public class NewSessionPayload implements Closeable {
           while (input.hasNext()) {
             name = input.nextName();
             if ("firstMatch".equals(name)) {
-              return input.read(new TypeToken<List<Map<String, Object>>>(){}.getType());
+              return input.read(LIST_OF_MAPS_TYPE);
             } else {
               input.skipValue();
             }

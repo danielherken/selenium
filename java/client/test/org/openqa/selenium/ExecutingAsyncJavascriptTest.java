@@ -32,7 +32,6 @@ import static org.openqa.selenium.testing.Driver.CHROME;
 import static org.openqa.selenium.testing.Driver.HTMLUNIT;
 import static org.openqa.selenium.testing.Driver.IE;
 import static org.openqa.selenium.testing.Driver.MARIONETTE;
-import static org.openqa.selenium.testing.Driver.PHANTOMJS;
 import static org.openqa.selenium.testing.Driver.SAFARI;
 import static org.openqa.selenium.testing.TestUtilities.catchThrowable;
 
@@ -49,13 +48,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-@Ignore(PHANTOMJS)
 public class ExecutingAsyncJavascriptTest extends JUnit4TestBase {
 
   private JavascriptExecutor executor;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     assumeTrue(driver instanceof JavascriptExecutor);
     executor = (JavascriptExecutor) driver;
     driver.manage().timeouts().setScriptTimeout(0, TimeUnit.MILLISECONDS);
@@ -216,7 +214,7 @@ public class ExecutingAsyncJavascriptTest extends JUnit4TestBase {
   @Test
   @Ignore(CHROME)
   @Ignore(IE)
-  @Ignore(SAFARI)
+  @NotYetImplemented(SAFARI)
   @Ignore(MARIONETTE)
   @NotYetImplemented(HTMLUNIT)
   public void shouldCatchErrorsWithMessageAndStacktraceWhenExecutingInitialScript() {
@@ -311,6 +309,7 @@ public class ExecutingAsyncJavascriptTest extends JUnit4TestBase {
   @Ignore(CHROME)
   @Ignore(IE)
   @Ignore(MARIONETTE)
+  @Ignore(value = SAFARI, reason = "Does not support alerts yet")
   @NeedsLocalEnvironment(reason = "Relies on timing")
   public void throwsIfScriptTriggersAlert() {
     driver.get(pages.simpleTestPage);
@@ -326,6 +325,7 @@ public class ExecutingAsyncJavascriptTest extends JUnit4TestBase {
   @Ignore(CHROME)
   @Ignore(IE)
   @Ignore(MARIONETTE)
+  @Ignore(value = SAFARI, reason = "Does not support alerts yet")
   @NeedsLocalEnvironment(reason = "Relies on timing")
   public void throwsIfAlertHappensDuringScript() {
     driver.get(pages.slowLoadingAlertPage);
@@ -340,6 +340,7 @@ public class ExecutingAsyncJavascriptTest extends JUnit4TestBase {
   @Ignore(CHROME)
   @Ignore(IE)
   @Ignore(MARIONETTE)
+  @Ignore(value = SAFARI, reason = "Does not support alerts yet")
   @NeedsLocalEnvironment(reason = "Relies on timing")
   public void throwsIfScriptTriggersAlertWhichTimesOut() {
     driver.get(pages.simpleTestPage);
@@ -355,6 +356,7 @@ public class ExecutingAsyncJavascriptTest extends JUnit4TestBase {
   @Ignore(CHROME)
   @Ignore(IE)
   @Ignore(MARIONETTE)
+  @Ignore(value = SAFARI, reason = "Does not support alerts yet")
   @NeedsLocalEnvironment(reason = "Relies on timing")
   public void throwsIfAlertHappensDuringScriptWhichTimesOut() {
     driver.get(pages.slowLoadingAlertPage);
@@ -369,6 +371,7 @@ public class ExecutingAsyncJavascriptTest extends JUnit4TestBase {
   @Ignore(CHROME)
   @Ignore(IE)
   @Ignore(MARIONETTE)
+  @Ignore(value = SAFARI, reason = "Does not support alerts yet")
   @NeedsLocalEnvironment(reason = "Relies on timing")
   public void includesAlertTextInUnhandledAlertException() {
     driver.manage().timeouts().setScriptTimeout(5000, TimeUnit.MILLISECONDS);

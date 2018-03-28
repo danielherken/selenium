@@ -24,9 +24,11 @@
 
 #include "command.h"
 #include "CustomTypes.h"
+#include "IElementManager.h"
 #include "messages.h"
 
-#define WAIT_TIME_IN_MILLISECONDS 200
+#define WAIT_TIME_IN_MILLISECONDS 50
+#define SCRIPT_WAIT_TIME_IN_MILLISECONDS 10
 #define FIND_ELEMENT_WAIT_TIME_IN_MILLISECONDS 250
 #define ASYNC_SCRIPT_EXECUTION_TIMEOUT_IN_MILLISECONDS 2000
 #define DEFAULT_FILE_UPLOAD_DIALOG_TIMEOUT_IN_MILLISECONDS 3000
@@ -54,7 +56,7 @@ class ProxyManager;
 // want to synchronize access to the command handler. For that we
 // use SendMessage() most of the time, and SendMessage() requires
 // a window handle.
-class IECommandExecutor : public CWindowImpl<IECommandExecutor> {
+class IECommandExecutor : public CWindowImpl<IECommandExecutor>, public IElementManager {
  public:
   DECLARE_WND_CLASS(L"WebDriverWndClass")
 
@@ -74,6 +76,9 @@ class IECommandExecutor : public CWindowImpl<IECommandExecutor> {
     MESSAGE_HANDLER(WD_REFRESH_MANAGED_ELEMENTS, OnRefreshManagedElements)
     MESSAGE_HANDLER(WD_HANDLE_UNEXPECTED_ALERTS, OnHandleUnexpectedAlerts)
     MESSAGE_HANDLER(WD_QUIT, OnQuit)
+    MESSAGE_HANDLER(WD_SCRIPT_WAIT, OnScriptWait)
+    MESSAGE_HANDLER(WD_ASYNC_SCRIPT_TRANSFER_MANAGED_ELEMENT, OnTransferManagedElement)
+    MESSAGE_HANDLER(WD_ASYNC_SCRIPT_SCHEDULE_REMOVE_MANAGED_ELEMENT, OnScheduleRemoveManagedElement)
   END_MSG_MAP()
 
   LRESULT OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
@@ -91,11 +96,15 @@ class IECommandExecutor : public CWindowImpl<IECommandExecutor> {
   LRESULT OnRefreshManagedElements(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
   LRESULT OnHandleUnexpectedAlerts(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
   LRESULT OnQuit(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
+  LRESULT OnScriptWait(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
+  LRESULT OnTransferManagedElement(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
+  LRESULT OnScheduleRemoveManagedElement(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 
   std::string session_id(void) const { return this->session_id_; }
 
   static unsigned int WINAPI ThreadProc(LPVOID lpParameter);
   static unsigned int WINAPI WaitThreadProc(LPVOID lpParameter);
+  static unsigned int WINAPI ScriptWaitThreadProc(LPVOID lpParameter);
 
   std::string current_browser_id(void) const { 
     return this->current_browser_id_; 
@@ -114,7 +123,7 @@ class IECommandExecutor : public CWindowImpl<IECommandExecutor> {
 
   int GetManagedElement(const std::string& element_id,
                         ElementHandle* element_wrapper) const;
-  void AddManagedElement(IHTMLElement* element,
+  bool AddManagedElement(IHTMLElement* element,
                          ElementHandle* element_wrapper);
   void RemoveManagedElement(const std::string& element_id);
   void ListManagedElements(void);
@@ -129,6 +138,9 @@ class IECommandExecutor : public CWindowImpl<IECommandExecutor> {
                      const std::string& mechanism,
                      const std::string& criteria,
                      Json::Value* found_elements) const;
+
+  HWND window_handle(void) const { return this->m_hWnd; }
+  IElementManager* element_manager(void) { return this; }
 
   unsigned long long implicit_wait_timeout(void) const {
     return this->implicit_wait_timeout_; 
@@ -197,7 +209,7 @@ class IECommandExecutor : public CWindowImpl<IECommandExecutor> {
   }
 
  private:
-  typedef std::tr1::unordered_map<std::string, BrowserHandle> BrowserMap;
+  typedef std::unordered_map<std::string, BrowserHandle> BrowserMap;
   typedef std::map<std::string, std::wstring> ElementFindMethodMap;
 
   void AddManagedBrowser(BrowserHandle browser_wrapper);
@@ -207,9 +219,10 @@ class IECommandExecutor : public CWindowImpl<IECommandExecutor> {
   void PopulateElementFinderMethods(void);
 
   bool IsAlertActive(BrowserHandle browser, HWND* alert_handle);
-  std::string HandleUnexpectedAlert(BrowserHandle browser,
-                                    HWND alert_handle,
-                                    bool force_use_dismiss);
+  bool HandleUnexpectedAlert(BrowserHandle browser,
+                             HWND alert_handle,
+                             bool force_use_dismiss,
+                             std::string* alert_text);
 
   BrowserMap managed_browsers_;
   ElementRepository* managed_elements_;

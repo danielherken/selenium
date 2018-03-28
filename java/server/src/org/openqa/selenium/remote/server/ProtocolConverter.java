@@ -27,7 +27,6 @@ import org.openqa.selenium.remote.ResponseCodec;
 import org.openqa.selenium.remote.http.HttpClient;
 import org.openqa.selenium.remote.http.HttpRequest;
 import org.openqa.selenium.remote.http.HttpResponse;
-import org.openqa.selenium.remote.internal.ApacheHttpClient;
 import org.openqa.selenium.remote.internal.JsonToWebElementConverter;
 
 import java.io.IOException;
@@ -66,7 +65,7 @@ class ProtocolConverter implements SessionCodec {
     this.downstreamResponse = downstreamResponse;
     this.upstreamResponse = upstreamResponse;
 
-    client = new ApacheHttpClient.Factory().createClient(upstreamUrl);
+    client = HttpClient.Factory.createDefault().createClient(upstreamUrl);
     converter = new JsonToWebElementConverter(null);
   }
 
@@ -93,7 +92,7 @@ class ProtocolConverter implements SessionCodec {
 
   @VisibleForTesting
   HttpResponse makeRequest(HttpRequest request) throws IOException {
-    return client.execute(request, true);
+    return client.execute(request);
   }
 
   private void copyToServletResponse(HttpResponse response, HttpResponse resp)

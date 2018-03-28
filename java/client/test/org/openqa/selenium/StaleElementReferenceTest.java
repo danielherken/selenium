@@ -21,17 +21,16 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.openqa.selenium.support.ui.ExpectedConditions.stalenessOf;
+import static org.openqa.selenium.testing.Driver.SAFARI;
 import static org.openqa.selenium.testing.TestUtilities.catchThrowable;
 
 import org.junit.Test;
-import org.openqa.selenium.testing.Driver;
-import org.openqa.selenium.testing.Ignore;
 import org.openqa.selenium.testing.JUnit4TestBase;
+import org.openqa.selenium.testing.NotYetImplemented;
 
 public class StaleElementReferenceTest extends JUnit4TestBase {
 
   @Test
-  @Ignore(value = Driver.MARIONETTE, reason = "https://bugzilla.mozilla.org/show_bug.cgi?id=1410799")
   public void testOldPage() {
     driver.get(pages.simpleTestPage);
     WebElement elem = driver.findElement(By.id("links"));
@@ -59,6 +58,7 @@ public class StaleElementReferenceTest extends JUnit4TestBase {
   }
 
   @Test
+  @NotYetImplemented(SAFARI)
   public void testRemovingAnElementDynamicallyFromTheDomShouldCauseAStaleRefException() {
     driver.get(pages.javascriptPage);
 

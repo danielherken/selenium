@@ -29,18 +29,25 @@ import org.openqa.grid.internal.listeners.SelfHealingProxy;
 import org.openqa.grid.internal.listeners.TestSessionListener;
 import org.openqa.grid.internal.listeners.TimeoutListener;
 import org.openqa.grid.internal.utils.HtmlRenderer;
+import org.openqa.grid.web.servlet.console.DefaultProxyHtmlRenderer;
+import org.openqa.selenium.remote.server.jmx.JMXHelper;
+import org.openqa.selenium.remote.server.jmx.ManagedAttribute;
+import org.openqa.selenium.remote.server.jmx.ManagedService;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Logger;
 
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /**
  * Default remote proxy for selenium, handling both selenium1 and webdriver requests.
  */
+@ManagedService(description = "Selenium Grid Hub TestSlot")
 public class DefaultRemoteProxy extends BaseRemoteProxy
     implements
       TimeoutListener,
@@ -64,6 +71,13 @@ public class DefaultRemoteProxy extends BaseRemoteProxy
     pollingInterval = config.nodePolling != null ? config.nodePolling : DEFAULT_POLLING_INTERVAL;
     unregisterDelay = config.unregisterIfStillDownAfter != null ? config.unregisterIfStillDownAfter : DEFAULT_UNREGISTER_DELAY;
     downPollingLimit = config.downPollingLimit != null ? config.downPollingLimit : DEFAULT_DOWN_POLLING_LIMIT;
+
+    // Only attempt to register the remote proxy as a JMX bean if it's managed.
+    if (this.getClass().getAnnotation(ManagedService.class) != null) {
+      JMXHelper helper = new JMXHelper();
+      helper.unregister(this.getObjectName());
+      helper.register(this);
+    }
   }
 
   public void beforeRelease(TestSession session) {
@@ -87,7 +101,7 @@ public class DefaultRemoteProxy extends BaseRemoteProxy
     session.put("lastCommand", request.getMethod() + " - " + request.getPathInfo() + " executing ...");
   }
 
-  private final HtmlRenderer renderer = new WebProxyHtmlRenderer(this);
+  private final HtmlRenderer renderer = new DefaultProxyHtmlRenderer(this);
 
   @Override
   public HtmlRenderer getHtmlRender() {
@@ -104,9 +118,10 @@ public class DefaultRemoteProxy extends BaseRemoteProxy
   private List<RemoteException> errors = new CopyOnWriteArrayList<>();
   private Thread pollingThread = null;
 
+  @ManagedAttribute
   public boolean isAlive() {
     try {
-      getStatus();
+      getProxyStatus();
       return true;
     } catch (Exception e) {
       LOG.fine("Failed to check status of node: " + e.getMessage());
@@ -191,6 +206,7 @@ public class DefaultRemoteProxy extends BaseRemoteProxy
     return super.getNewSession(requestedCapability);
   }
 
+  @ManagedAttribute
   public boolean isDown() {
     return down;
   }
@@ -225,4 +241,15 @@ public class DefaultRemoteProxy extends BaseRemoteProxy
     super.teardown();
     stopPolling();
   }
+
+  public ObjectName getObjectName() {
+    try {
+      return new ObjectName(
+          String.format("org.seleniumhq.grid:type=RemoteProxy,node=\"%s\"", getRemoteHost()));
+    } catch (MalformedObjectNameException e) {
+      e.printStackTrace();
+      return null;
+    }
+  }
+
 }

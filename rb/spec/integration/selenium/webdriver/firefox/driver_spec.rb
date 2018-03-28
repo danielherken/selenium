@@ -33,8 +33,6 @@ module Selenium
           expect(caps.implicit_timeout).to be_zero
           expect(caps.page_load_timeout).to be == 300000
           expect(caps.script_timeout).to be == 30000
-
-          expect(caps.remote_session_id).to be_nil
         end
       end
 
@@ -54,7 +52,13 @@ module Selenium
         end
       end
 
-      it 'takes a binary path as an argument' do
+      it 'has remote session ID', only: {driver: :remote}, except: {browser: :ff_esr} do
+        create_driver! do |driver|
+          expect(driver.capabilities.remote_session_id).to be
+        end
+      end
+
+      it 'takes a binary path as an argument', only: {driver: :firefox} do
         skip "Set ENV['ALT_FIREFOX_BINARY'] to test this" unless ENV['ALT_FIREFOX_BINARY']
 
         begin
@@ -75,7 +79,7 @@ module Selenium
         end
       end
 
-      it 'gives precedence to firefox options versus argument switch' do
+      it 'gives precedence to firefox options versus argument switch', only: {driver: :firefox} do
         skip "Set ENV['ALT_FIREFOX_BINARY'] to test this" unless ENV['ALT_FIREFOX_BINARY']
 
         begin
@@ -86,9 +90,8 @@ module Selenium
             expect { driver.capabilities.browser_version }.to_not raise_exception
           end
 
-          caps = Remote::Capabilities.firefox(firefox_options: {binary: ENV['ALT_FIREFOX_BINARY']},
-                                              service_args: {binary: path})
-          create_driver!(desired_capabilities: caps) do |driver|
+          caps = Remote::Capabilities.firefox(firefox_options: {binary: ENV['ALT_FIREFOX_BINARY']})
+          create_driver!(desired_capabilities: caps, driver_opts: {binary: path}) do |driver|
             expect(driver.capabilities.version).to_not eql(@default_version)
             expect { driver.capabilities.browser_version }.to_not raise_exception
           end

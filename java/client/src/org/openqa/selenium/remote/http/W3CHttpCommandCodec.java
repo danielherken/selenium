@@ -66,11 +66,8 @@ import static org.openqa.selenium.remote.DriverCommand.SET_SESSION_STORAGE_ITEM;
 import static org.openqa.selenium.remote.DriverCommand.SET_TIMEOUT;
 import static org.openqa.selenium.remote.DriverCommand.SUBMIT_ELEMENT;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
 
 import org.openqa.selenium.WebDriverException;
@@ -83,6 +80,7 @@ import org.openqa.selenium.remote.internal.WebElementToJsonConverter;
 
 import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -184,8 +182,7 @@ public class W3CHttpCommandCodec extends AbstractHttpCommandCodec {
         String using = (String) parameters.get("using");
         String value = (String) parameters.get("value");
 
-        Map<String, Object> toReturn = new HashMap<>();
-        toReturn.putAll(parameters);
+        Map<String, Object> toReturn = new HashMap<>(parameters);
 
         switch (using) {
           case "class name":
@@ -295,7 +292,7 @@ public class W3CHttpCommandCodec extends AbstractHttpCommandCodec {
         PointerInput.Origin origin = PointerInput.Origin.pointer();
         if (parameters.containsKey("element")) {
           RemoteWebElement element = new RemoteWebElement();
-          element.setId((String) parameters.get("id"));
+          element.setId((String) parameters.get("element"));
           origin = PointerInput.Origin.fromElement(element);
         }
         int x = parameters.containsKey("xoffset") ? ((Number) parameters.get("xoffset")).intValue() : 0;
@@ -388,7 +385,7 @@ public class W3CHttpCommandCodec extends AbstractHttpCommandCodec {
       String scriptName = "/org/openqa/selenium/remote/" + atomFileName;
       URL url = getClass().getResource(scriptName);
 
-      String rawFunction = Resources.toString(url, Charsets.UTF_8);
+      String rawFunction = Resources.toString(url, StandardCharsets.UTF_8);
       String script = String.format(
         "return (%s).apply(null, arguments);",
         rawFunction);
@@ -402,12 +399,12 @@ public class W3CHttpCommandCodec extends AbstractHttpCommandCodec {
     // Escape the quote marks
     script = script.replaceAll("\"", "\\\"");
 
-    Iterable<Object> convertedArgs = Iterables.transform(
-      Lists.newArrayList(args), new WebElementToJsonConverter());
+    List<Object> convertedArgs = Stream.of(args).map(new WebElementToJsonConverter()).collect(
+        Collectors.toList());
 
     return ImmutableMap.of(
       "script", script,
-      "args", Lists.newArrayList(convertedArgs));
+      "args", convertedArgs);
   }
 
   private Map<String, String> asElement(Object id) {

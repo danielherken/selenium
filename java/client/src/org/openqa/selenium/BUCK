@@ -1,11 +1,6 @@
 # BUILD FILE SYNTAX: SKYLARK
 load("//:selenium-version.bzl", "SE_VERSION")
 
-build_stamp(name = 'build-stamp',
-  kind = 'manifest',
-  source_control_system = 'git',
-)
-
 java_library(name = 'selenium',
   exported_deps = [
     ':beta',
@@ -19,7 +14,6 @@ java_library(name = 'selenium',
     '//java/client/src/org/openqa/selenium/logging:logging',
     '//java/client/src/org/openqa/selenium/net:net',
     '//java/client/src/org/openqa/selenium/os:os',
-    '//java/client/src/org/openqa/selenium/security:security',
   ],
   visibility = ['PUBLIC'],
 )
@@ -60,8 +54,6 @@ java_library(name = 'core',
     'internal/ElementScrollBehavior.java',
     'internal/HasIdentity.java',
     'internal/Locatable.java',
-    'internal/Lock.java',
-    'internal/SocketLock.java',
     'internal/WrapsDriver.java',
     'internal/WrapsElement.java',
   ] + glob([
@@ -69,7 +61,6 @@ java_library(name = 'core',
      'internal/FindsBy*.java',
      'mobile/*.java',
   ]),
-  manifest_file = ':manifest',
   exported_deps = [
     # This list of dependencies MUST NOT include anything other than code
     # from the selenium project. That means no guava and no gson.
@@ -80,7 +71,6 @@ java_library(name = 'core',
     '//java/client/src/org/openqa/selenium/interactions:core',
     '//java/client/src/org/openqa/selenium/interactions:exceptions',
     '//java/client/src/org/openqa/selenium/logging:api',
-    '//java/client/src/org/openqa/selenium/security:security',
   ],
   visibility = [
     'PUBLIC',
@@ -89,8 +79,7 @@ java_library(name = 'core',
 
 genrule(name = 'manifest',
   out = 'manifest.mf',
-  bash = "cp $(location :build-stamp) $OUT && printf 'Selenium-Version: {}\n\n' >> $OUT".format(SE_VERSION),
-  cmd_exe = "copy $(location :build-stamp) %OUT% && (echo Selenium-Version: {}\n\n) >> %OUT%".format(SE_VERSION),
+  cmd = 'python -c "print(\'\\n\\nName: Build-Info\\nSelenium-Version: {}\\n\\n\')" >> $OUT'.format(SE_VERSION),
 )
 
 java_library(name = 'beta',
@@ -100,7 +89,6 @@ java_library(name = 'beta',
     '//java/client/src/org/openqa/selenium/logging:api',
     '//java/client/src/org/openqa/selenium/logging:logging',
     '//java/client/src/org/openqa/selenium/os:os',
-    '//java/client/src/org/openqa/selenium/security:security',
   ],
 )
 
@@ -134,6 +122,7 @@ java_library(name = 'exceptions',
     'WebDriverException.java',
     'internal/BuildInfo.java',
   ],
+  manifest_file = ':manifest',
   deps = [
     ':beta',
   ],

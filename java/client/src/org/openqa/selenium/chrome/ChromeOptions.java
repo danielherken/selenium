@@ -25,8 +25,6 @@ import static org.openqa.selenium.remote.CapabilityType.UNEXPECTED_ALERT_BEHAVIO
 import static org.openqa.selenium.remote.CapabilityType.UNHANDLED_PROMPT_BEHAVIOUR;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 
 import org.openqa.selenium.Capabilities;
@@ -40,12 +38,15 @@ import org.openqa.selenium.remote.CapabilityType;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
+import java.util.stream.Stream;
 
 /**
  * Class to manage options specific to {@link ChromeDriver}.
@@ -76,10 +77,10 @@ public class ChromeOptions extends MutableCapabilities {
   public static final String CAPABILITY = "goog:chromeOptions";
 
   private String binary;
-  private List<String> args = Lists.newArrayList();
-  private List<File> extensionFiles = Lists.newArrayList();
-  private List<String> extensions = Lists.newArrayList();
-  private Map<String, Object> experimentalOptions = Maps.newHashMap();
+  private List<String> args = new ArrayList<>();
+  private List<File> extensionFiles = new ArrayList<>();
+  private List<String> extensions = new ArrayList<>();
+  private Map<String, Object> experimentalOptions = new HashMap<>();
 
   public ChromeOptions() {
     setCapability(CapabilityType.BROWSER_NAME, BrowserType.CHROME);
@@ -229,6 +230,11 @@ public class ChromeOptions extends MutableCapabilities {
     return this;
   }
 
+  /**
+   * Returns ChromeOptions with the capability ACCEPT_INSECURE_CERTS set.
+   * @param acceptInsecureCerts
+   * @return ChromeOptions
+   */
   public ChromeOptions setAcceptInsecureCerts(boolean acceptInsecureCerts) {
     setCapability(ACCEPT_INSECURE_CERTS, acceptInsecureCerts);
     return this;
@@ -245,19 +251,6 @@ public class ChromeOptions extends MutableCapabilities {
 
   public ChromeOptions setProxy(Proxy proxy) {
     setCapability(CapabilityType.PROXY, proxy);
-    return this;
-  }
-
-  /**
-   * Returns DesiredCapabilities for Chrome with these options included as
-   * capabilities. This does not copy the options. Further changes will be
-   * reflected in the returned capabilities.
-   *
-   * @return DesiredCapabilities for Chrome with these options.
-   * @deprecated This class is already an instance of {@link MutableCapabilities}.
-   */
-  @Deprecated
-  MutableCapabilities toCapabilities() {
     return this;
   }
 
@@ -287,15 +280,17 @@ public class ChromeOptions extends MutableCapabilities {
 
     options.put(
         "extensions",
-        extensionFiles.stream()
-            .map(file -> {
-              try {
-                return Base64.getEncoder().encodeToString(Files.toByteArray(file));
-              } catch (IOException e) {
-                throw new SessionNotCreatedException(e.getMessage(), e);
-              }
-            })
-            .collect(ImmutableList.toImmutableList()));
+        Stream.concat(
+            extensionFiles.stream()
+                .map(file -> {
+                  try {
+                    return Base64.getEncoder().encodeToString(Files.toByteArray(file));
+                  } catch (IOException e) {
+                    throw new SessionNotCreatedException(e.getMessage(), e);
+                  }
+                }),
+            extensions.stream()
+        ).collect(ImmutableList.toImmutableList()));
 
     toReturn.put(CAPABILITY, options);
 

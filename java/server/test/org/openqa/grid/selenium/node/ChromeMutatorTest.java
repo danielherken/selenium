@@ -18,12 +18,15 @@
 package org.openqa.grid.selenium.node;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.openqa.selenium.chrome.ChromeOptions.CAPABILITY;
 
 import com.google.common.collect.ImmutableMap;
 
 import org.junit.Test;
+import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
+import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.ImmutableCapabilities;
 import org.openqa.selenium.chrome.ChromeOptions;
 
@@ -38,7 +41,7 @@ public class ChromeMutatorTest {
   public void shouldDoNothingIfBrowserNameIsNotChrome() {
     ImmutableCapabilities caps = new ImmutableCapabilities("browserName", "cake");
 
-    ImmutableCapabilities seen = new ChromeMutator(defaultConfig).apply(caps);
+    Capabilities seen = new ChromeMutator(defaultConfig).apply(caps);
 
     // Make sure we return exactly the same instance of the capabilities, and not just a copy.
     assertSame(caps, seen);
@@ -51,7 +54,7 @@ public class ChromeMutatorTest {
         CAPABILITY, ImmutableMap.of("binary", "cake"));
 
     ImmutableCapabilities caps = new ImmutableCapabilities("browserName", "chrome");
-    ImmutableCapabilities seen = new FirefoxMutator(config).apply(caps);
+    Capabilities seen = new FirefoxMutator(config).apply(caps);
 
     assertSame(caps, seen);
   }
@@ -59,7 +62,7 @@ public class ChromeMutatorTest {
   @Test
   public void shouldInjectBinaryIfNotSpecified() {
     ImmutableCapabilities caps = new ImmutableCapabilities(new ChromeOptions());
-    ImmutableCapabilities seen = new ChromeMutator(defaultConfig).apply(caps);
+    Capabilities seen = new ChromeMutator(defaultConfig).apply(caps);
 
     @SuppressWarnings("unchecked")
     Map<String, Object> options = (Map<String, Object>) seen.getCapability(CAPABILITY);
@@ -67,5 +70,100 @@ public class ChromeMutatorTest {
     assertEquals(
         options.get("binary"),
         defaultConfig.getCapability("chrome_binary"));
+  }
+
+  @Test
+  public void shouldNotInjectNullBinary() {
+    ImmutableCapabilities caps = new ImmutableCapabilities(new ChromeOptions());
+    Capabilities seen = new ChromeMutator(
+        new ImmutableCapabilities("browserName", "chrome")).apply(caps);
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> options = (Map<String, Object>) seen.getCapability(CAPABILITY);
+
+    assertFalse(options.containsKey("binary"));
+  }
+
+  @Test
+  public void shouldNotInjectBinaryIfSpecified() {
+    ImmutableCapabilities caps = new ImmutableCapabilities(new ChromeOptions().setBinary("cheese"));
+    Capabilities seen = new ChromeMutator(defaultConfig).apply(caps);
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> options = (Map<String, Object>) seen.getCapability(CAPABILITY);
+
+    assertEquals(options.get("binary"), "cheese");
+  }
+
+  @Test
+  public void shouldInjectIfConfigUuidMatches() {
+    ImmutableCapabilities config = new ImmutableCapabilities(
+        "browserName", "chrome",
+        "chrome_binary", "binary",
+        GridNodeConfiguration.CONFIG_UUID_CAPABILITY, "123");
+    ImmutableCapabilities caps = new ImmutableCapabilities(
+        "browserName", "chrome",
+        CAPABILITY, ImmutableMap.of(),
+        GridNodeConfiguration.CONFIG_UUID_CAPABILITY, "123");
+
+    Capabilities seen = new ChromeMutator(config).apply(caps);
+
+    Map<String, Object> options = (Map<String, Object>) seen.getCapability(CAPABILITY);
+
+    assertEquals(
+        options.get("binary"),
+        config.getCapability("chrome_binary"));
+  }
+
+  @Test
+  public void shouldNotInjectIfConfigUuidDoesNotMatch() {
+    ImmutableCapabilities config = new ImmutableCapabilities(
+        "browserName", "chrome",
+        "chrome_binary", "binary",
+        GridNodeConfiguration.CONFIG_UUID_CAPABILITY, "uuid");
+    ImmutableCapabilities caps = new ImmutableCapabilities(
+        "browserName", "chrome",
+        CAPABILITY, ImmutableMap.of("binary", "cheese"),
+        GridNodeConfiguration.CONFIG_UUID_CAPABILITY, "123");
+
+    Capabilities seen = new ChromeMutator(config).apply(caps);
+
+    Map<String, Object> options = (Map<String, Object>) seen.getCapability(CAPABILITY);
+
+    assertEquals(options.get("binary"), "cheese");
+  }
+
+  @Test
+  public void shouldNotInjectIfUuidIsPresentInConfigOnly() {
+    ImmutableCapabilities config = new ImmutableCapabilities(
+        "browserName", "chrome",
+        "chrome_binary", "binary",
+        GridNodeConfiguration.CONFIG_UUID_CAPABILITY, "uuid");
+    ImmutableCapabilities caps = new ImmutableCapabilities(
+        "browserName", "chrome",
+        CAPABILITY, ImmutableMap.of("binary", "cheese"));
+
+    Capabilities seen = new ChromeMutator(config).apply(caps);
+
+    Map<String, Object> options = (Map<String, Object>) seen.getCapability(CAPABILITY);
+
+    assertEquals(options.get("binary"), "cheese");
+  }
+
+  @Test
+  public void shouldNotInjectIfUuidIsPresentInPayloadOnly() {
+    ImmutableCapabilities config = new ImmutableCapabilities(
+        "browserName", "chrome",
+        "chrome_binary", "binary");
+    ImmutableCapabilities caps = new ImmutableCapabilities(
+        "browserName", "chrome",
+        CAPABILITY, ImmutableMap.of("binary", "cheese"),
+        GridNodeConfiguration.CONFIG_UUID_CAPABILITY, "123");
+
+    Capabilities seen = new ChromeMutator(config).apply(caps);
+
+    Map<String, Object> options = (Map<String, Object>) seen.getCapability(CAPABILITY);
+
+    assertEquals(options.get("binary"), "cheese");
   }
 }

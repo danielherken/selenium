@@ -34,6 +34,7 @@ import org.openqa.selenium.remote.SessionId;
 import java.io.File;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
+import java.net.URL;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
@@ -42,11 +43,8 @@ import java.util.logging.Level;
 
 /**
  * Utility class for converting between JSON and Java Objects.
- *
- * @deprecated Visisibility will be reduced.
  */
-@Deprecated
-public class BeanToJsonConverter {
+class BeanToJsonConverter {
 
   private static final int MAX_DEPTH = 5;
 
@@ -100,7 +98,7 @@ public class BeanToJsonConverter {
   }
 
   @SuppressWarnings("unchecked")
-  private JsonElement convertObject(Object toConvert, int maxDepth) throws Exception {
+  private JsonElement convertObject(Object toConvert, int maxDepth) {
     if (toConvert == null) {
       return JsonNull.INSTANCE;
     }
@@ -173,6 +171,10 @@ public class BeanToJsonConverter {
       return new JsonPrimitive(((File) toConvert).getAbsolutePath());
     }
 
+    if (toConvert instanceof URL) {
+      return new JsonPrimitive(((URL) toConvert).toExternalForm());
+    }
+
     Method toJson = getMethod(toConvert, "toJson");
     if (toJson != null) {
       try {
@@ -243,8 +245,9 @@ public class BeanToJsonConverter {
         continue;
       }
 
+      // Only include methods not on java.lang.Object to stop things being super-noisy
       Method readMethod = pd.getReadMethod();
-      if (readMethod == null) {
+      if (readMethod == null || Object.class.equals(readMethod.getDeclaringClass())) {
         continue;
       }
 

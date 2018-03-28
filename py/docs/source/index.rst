@@ -21,13 +21,12 @@ The `selenium` package is used to automate web browser interaction from Python.
 | **IRC**:  | **#selenium** channel on freenode                                                    |
 +-----------+--------------------------------------------------------------------------------------+
 
-Several browsers/drivers are supported (Firefox, Chrome, Internet Explorer, PhantomJS), as well as the Remote protocol.
+Several browsers/drivers are supported (Firefox, Chrome, Internet Explorer), as well as the Remote protocol.
 
 Supported Python Versions
 =========================
 
-* Python 2.6, 2.7
-* Python 3.3+
+* Python 2.7, 3.4+
 
 Installing
 ==========
@@ -36,11 +35,11 @@ If you have `pip <https://pip.pypa.io/>`_ on your system, you can simply install
 
     pip install -U selenium
 
-Alternately, you can download the source distribution from `PyPI <http://pypi.python.org/pypi/selenium>`_ (e.g. selenium-3.7.0.tar.gz), unarchive it, and run::
+Alternately, you can download the source distribution from `PyPI <http://pypi.python.org/pypi/selenium>`_ (e.g. selenium-3.11.0.tar.gz), unarchive it, and run::
 
     python setup.py install
 
-Note: both of the methods described above install `selenium` as a system-wide package  That will require administrative/root access to their machine.  You may consider using a `virtualenv <http://www.virtualenv.org/>`_ to create isolated Python environments instead.
+Note: You may want to consider using `virtualenv <http://www.virtualenv.org/>`_ to create isolated Python environments.
 
 Drivers
 =======
@@ -128,11 +127,11 @@ For normal WebDriver scripts (non-Remote), the Java server is not needed.
 
 However, to use Selenium Webdriver Remote or the legacy Selenium API (Selenium-RC), you need to also run the Selenium server.  The server requires a Java Runtime Environment (JRE).
 
-Download the server separately, from: http://selenium-release.storage.googleapis.com/3.7/selenium-server-standalone-3.7.0.jar
+Download the server separately, from: http://selenium-release.storage.googleapis.com/3.11/selenium-server-standalone-3.11.0.jar
 
 Run the server from the command line::
 
-    java -jar selenium-server-standalone-3.7.0.jar
+    java -jar selenium-server-standalone-3.11.0.jar
 
 Then run your Python client scripts.
 

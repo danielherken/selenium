@@ -102,9 +102,12 @@ abstract class AbstractCapabilities implements Capabilities {
     return Collections.unmodifiableMap(caps);
   }
 
+  public Map<String, Object> toJson() {
+    return asMap();
+  }
+
   /**
    * Subclasses can use this to add information that isn't always in the capabilities map.
-   * @return
    */
   protected int amendHashCode() {
     return 0;

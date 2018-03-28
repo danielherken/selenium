@@ -18,12 +18,6 @@
 module Selenium
   module WebDriver
     module Remote
-      def self.const_missing(const_name)
-        super unless const_name == :W3CCapabilities
-        WebDriver.logger.deprecate 'Selenium::WebDriver::Remote::W3CCapabilities', 'Selenium::WebDriver::Remote::Capabilities'
-        W3C::Capabilities
-      end
-
       module W3C
 
         #
@@ -255,6 +249,9 @@ module Selenium
                 if value
                   hash['proxy'] = value.as_json
                   hash['proxy']['proxyType'] &&= hash['proxy']['proxyType'].downcase
+                  if hash['proxy']['noProxy'].is_a?(String)
+                    hash['proxy']['noProxy'] = hash['proxy']['noProxy'].split(', ')
+                  end
                 end
               when String, :firefox_binary
                 hash[key.to_s] = value

@@ -27,14 +27,13 @@ import org.openqa.selenium.remote.http.HttpClient;
 import org.openqa.selenium.remote.http.HttpMethod;
 import org.openqa.selenium.remote.http.HttpRequest;
 import org.openqa.selenium.remote.http.HttpResponse;
-import org.openqa.selenium.remote.internal.ApacheHttpClient;
 import org.openqa.selenium.support.ui.FluentWait;
 import org.openqa.selenium.support.ui.Wait;
 
 import java.io.IOException;
 import java.net.URL;
+import java.time.Duration;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 public class GridSupplier implements Supplier<WebDriver> {
@@ -82,16 +81,16 @@ public class GridSupplier implements Supplier<WebDriver> {
     }
 
     // Keep polling the status page of the hub until it claims to be ready
-    HttpClient client = new ApacheHttpClient.Factory().createClient(hub.getWebDriverUrl());
+    HttpClient client = HttpClient.Factory.createDefault().createClient(hub.getWebDriverUrl());
     Json json = new Json();
     Wait<HttpClient> wait = new FluentWait<>(client)
         .ignoring(RuntimeException.class)
-        .withTimeout(30, TimeUnit.SECONDS);
+        .withTimeout(Duration.ofSeconds(30));
     wait.until(c -> {
       HttpRequest req = new HttpRequest(HttpMethod.GET, "/status");
       HttpResponse response = null;
       try {
-        response = c.execute(req, true);
+        response = c.execute(req);
       } catch (IOException e) {
         throw new RuntimeException(e);
       }

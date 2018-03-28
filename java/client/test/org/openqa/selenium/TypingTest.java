@@ -26,10 +26,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assume.assumeFalse;
 import static org.openqa.selenium.WaitingConditions.elementValueToEqual;
-import static org.openqa.selenium.testing.Driver.HTMLUNIT;
 import static org.openqa.selenium.testing.Driver.IE;
 import static org.openqa.selenium.testing.Driver.MARIONETTE;
-import static org.openqa.selenium.testing.Driver.PHANTOMJS;
 import static org.openqa.selenium.testing.Driver.SAFARI;
 import static org.openqa.selenium.testing.TestUtilities.catchThrowable;
 import static org.openqa.selenium.testing.TestUtilities.getEffectivePlatform;
@@ -156,6 +154,7 @@ public class TypingTest extends JUnit4TestBase {
   }
 
   @Test
+  @NotYetImplemented(value = SAFARI, reason = "getText does not normalize spaces")
   public void testWillSimulateAKeyUpWhenEnteringTextIntoInputElements() {
     driver.get(pages.javascriptPage);
 
@@ -167,6 +166,7 @@ public class TypingTest extends JUnit4TestBase {
   }
 
   @Test
+  @NotYetImplemented(value = SAFARI, reason = "getText does not normalize spaces")
   public void testWillSimulateAKeyDownWhenEnteringTextIntoInputElements() {
     driver.get(pages.javascriptPage);
 
@@ -180,6 +180,7 @@ public class TypingTest extends JUnit4TestBase {
   }
 
   @Test
+  @NotYetImplemented(value = SAFARI, reason = "getText does not normalize spaces")
   public void testWillSimulateAKeyPressWhenEnteringTextIntoInputElements() {
     driver.get(pages.javascriptPage);
 
@@ -193,6 +194,7 @@ public class TypingTest extends JUnit4TestBase {
   }
 
   @Test
+  @NotYetImplemented(value = SAFARI, reason = "getText does not normalize spaces")
   public void testWillSimulateAKeyUpWhenEnteringTextIntoTextAreas() {
     driver.get(pages.javascriptPage);
 
@@ -204,6 +206,7 @@ public class TypingTest extends JUnit4TestBase {
   }
 
   @Test
+  @NotYetImplemented(value = SAFARI, reason = "getText does not normalize spaces")
   public void testWillSimulateAKeyDownWhenEnteringTextIntoTextAreas() {
     driver.get(pages.javascriptPage);
 
@@ -217,6 +220,7 @@ public class TypingTest extends JUnit4TestBase {
   }
 
   @Test
+  @NotYetImplemented(value = SAFARI, reason = "getText does not normalize spaces")
   public void testWillSimulateAKeyPressWhenEnteringTextIntoTextAreas() {
     driver.get(pages.javascriptPage);
 
@@ -230,7 +234,7 @@ public class TypingTest extends JUnit4TestBase {
   }
 
   @Test
-  @Ignore(IE)
+  @NotYetImplemented(value = SAFARI, reason = "getText does not normalize spaces")
   public void testShouldFireFocusKeyEventsInTheRightOrder() {
     driver.get(pages.javascriptPage);
 
@@ -249,7 +253,6 @@ public class TypingTest extends JUnit4TestBase {
 
   @Test
   @Ignore(IE)
-  @Ignore(PHANTOMJS)
   public void testShouldReportKeyCodeOfArrowKeys() {
     assumeFalse(Browser.detect() == Browser.opera &&
                 getEffectivePlatform().is(Platform.WINDOWS));
@@ -431,6 +434,7 @@ public class TypingTest extends JUnit4TestBase {
 
   @Test
   @NotYetImplemented(value = MARIONETTE)
+  @NotYetImplemented(value = SAFARI, reason = "Enters dot instead of comma")
   public void testNumberpadKeys() {
     driver.get(pages.javascriptPage);
 
@@ -456,7 +460,7 @@ public class TypingTest extends JUnit4TestBase {
   }
 
   @Test
-  @Ignore(value = SAFARI, reason = "issue 4221")
+  @NotYetImplemented(SAFARI)
   public void testShiftSelectionDeletes() {
     driver.get(pages.javascriptPage);
 
@@ -591,7 +595,7 @@ public class TypingTest extends JUnit4TestBase {
   }
 
   @Test
-  @Ignore(PHANTOMJS)
+  @NotYetImplemented(value = SAFARI, reason = "getText does not normalize spaces")
   public void testGenerateKeyPressEventEvenWhenElementPreventsDefault() {
     assumeFalse(isFirefox(driver) && getFirefoxVersion(driver) < 25);
     driver.get(pages.javascriptPage);
@@ -620,7 +624,6 @@ public class TypingTest extends JUnit4TestBase {
   }
 
   @Test
-  @NotYetImplemented(HTMLUNIT)
   public void testShouldThrowIllegalArgumentException() {
     driver.get(pages.formPage);
     WebElement email = driver.findElement(By.id("age"));
@@ -629,7 +632,6 @@ public class TypingTest extends JUnit4TestBase {
   }
 
   @Test
-  @Ignore(SAFARI)
   public void canSafelyTypeOnElementThatIsRemovedFromTheDomOnKeyPress() {
     driver.get(appServer.whereIs("key_tests/remove_on_keypress.html"));
 

@@ -37,6 +37,7 @@ import org.openqa.selenium.remote.server.log.PerSessionLogHandler;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -148,7 +149,6 @@ public class ResultConfig {
       final PerSessionLogHandler logHandler = LoggingManager.perSessionLogHandler();
       logHandler.transferThreadTempLogsToSessionLogs(sessionId);
       logHandler.removeSessionLogs(sessionId);
-      sessions.deleteSession(sessionId);
     }
     return response;
   }
@@ -175,7 +175,7 @@ public class ResultConfig {
     // exception as the one to return to the client. That is the most
     // likely to contain informative data about the error.
     // This is a safety measure to make sure this loop is never endless
-    List<Throwable> chain = Lists.newArrayListWithExpectedSize(10);
+    List<Throwable> chain = new ArrayList<>(10);
     for (Throwable current = toReturn; current != null && chain.size() < 10; current =
         current.getCause()) {
       chain.add(current);

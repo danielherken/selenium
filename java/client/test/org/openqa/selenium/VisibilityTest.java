@@ -30,7 +30,6 @@ import static org.openqa.selenium.support.ui.ExpectedConditions.not;
 import static org.openqa.selenium.support.ui.ExpectedConditions.visibilityOf;
 import static org.openqa.selenium.testing.Driver.HTMLUNIT;
 import static org.openqa.selenium.testing.Driver.IE;
-import static org.openqa.selenium.testing.Driver.PHANTOMJS;
 import static org.openqa.selenium.testing.Driver.SAFARI;
 import static org.openqa.selenium.testing.TestUtilities.catchThrowable;
 
@@ -141,8 +140,7 @@ public class VisibilityTest extends JUnit4TestBase {
 
   @Test
   @Ignore(IE)
-  @Ignore(PHANTOMJS)
-  @Ignore(SAFARI)
+  @NotYetImplemented(SAFARI)
   @NotYetImplemented(HTMLUNIT)
   public void testElementHiddenByOverflowXIsNotVisible() {
     String[] pages = new String[]{
@@ -160,8 +158,8 @@ public class VisibilityTest extends JUnit4TestBase {
   }
 
   @Test
-  @Ignore(PHANTOMJS)
   @NotYetImplemented(HTMLUNIT)
+  @NotYetImplemented(SAFARI)
   public void testElementHiddenByOverflowYIsNotVisible() {
     String[] pages = new String[]{
         "overflow/x_hidden_y_hidden.html",
@@ -197,7 +195,6 @@ public class VisibilityTest extends JUnit4TestBase {
 
   @Test
   @Ignore(IE)
-  @Ignore(SAFARI)
   public void testElementScrollableByOverflowYIsVisible() {
     String[] pages = new String[]{
         "overflow/x_hidden_y_scroll.html",
@@ -276,6 +273,7 @@ public class VisibilityTest extends JUnit4TestBase {
    */
   @Test
   @Ignore(IE)
+  @NotYetImplemented(SAFARI)
   public void testShouldBeAbleToClickOnElementsWithOpacityZero() {
     driver.get(pages.clickJacker);
 
@@ -287,6 +285,7 @@ public class VisibilityTest extends JUnit4TestBase {
   }
 
   @Test
+  @NotYetImplemented(SAFARI)
   public void testShouldBeAbleToSelectOptionsFromAnInvisibleSelect() {
     driver.get(pages.formPage);
 
@@ -305,6 +304,7 @@ public class VisibilityTest extends JUnit4TestBase {
   }
 
   @Test
+  @NotYetImplemented(SAFARI)
   public void testCorrectlyDetectMapElementsAreShown() {
     driver.get(pages.mapVisibilityPage);
 

@@ -22,7 +22,6 @@ import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeFalse;
-import static org.openqa.selenium.testing.Driver.HTMLUNIT;
 import static org.openqa.selenium.testing.Driver.IE;
 import static org.openqa.selenium.testing.Driver.MARIONETTE;
 import static org.openqa.selenium.testing.Driver.SAFARI;
@@ -45,7 +44,6 @@ import org.openqa.selenium.testing.TestUtilities;
 /**
  * Tests interaction through the advanced gestures API of keyboard handling.
  */
-@Ignore(value = SAFARI, reason = "not implemented (issue 4136)")
 public class BasicKeyboardInterfaceTest extends JUnit4TestBase {
 
   private Actions getBuilder(WebDriver driver) {
@@ -67,6 +65,7 @@ public class BasicKeyboardInterfaceTest extends JUnit4TestBase {
 
   @Test
   @Ignore(IE)
+  @NotYetImplemented(SAFARI)
   public void testSendingKeyDownOnly() {
     driver.get(appServer.whereIs("key_logger.html"));
 
@@ -88,6 +87,7 @@ public class BasicKeyboardInterfaceTest extends JUnit4TestBase {
 
   @Test
   @Ignore(IE)
+  @NotYetImplemented(SAFARI)
   public void testSendingKeyUp() {
     driver.get(appServer.whereIs("key_logger.html"));
 
@@ -113,6 +113,7 @@ public class BasicKeyboardInterfaceTest extends JUnit4TestBase {
   @Test
   @Ignore(IE)
   @Ignore(value = MARIONETTE, issue = "https://github.com/mozilla/geckodriver/issues/646")
+  @NotYetImplemented(SAFARI)
   public void testSendingKeysWithShiftPressed() {
     driver.get(pages.javascriptPage);
 
@@ -139,6 +140,7 @@ public class BasicKeyboardInterfaceTest extends JUnit4TestBase {
   }
 
   @Test
+  @NotYetImplemented(value = SAFARI, reason = "getText does not normalize spaces")
   public void testSendingKeysToActiveElement() {
     driver.get(pages.bodyTypingPage);
 
@@ -165,7 +167,6 @@ public class BasicKeyboardInterfaceTest extends JUnit4TestBase {
   }
 
   @Test
-  @NotYetImplemented(HTMLUNIT)
   public void testThrowsIllegalArgumentExceptionWithNullKeys() {
     driver.get(pages.javascriptPage);
     Throwable t = catchThrowable(() -> driver.findElement(By.id("keyReporter")).sendKeys(null));
@@ -173,6 +174,7 @@ public class BasicKeyboardInterfaceTest extends JUnit4TestBase {
   }
 
   @Test
+  @NotYetImplemented(SAFARI)
   public void canGenerateKeyboardShortcuts() {
     driver.get(appServer.whereIs("keyboard_shortcut.html"));
 
@@ -194,6 +196,7 @@ public class BasicKeyboardInterfaceTest extends JUnit4TestBase {
   }
 
   @Test
+  @NotYetImplemented(value = MARIONETTE, reason = "https://bugzilla.mozilla.org/show_bug.cgi?id=1422583")
   public void testSelectionSelectBySymbol() {
     driver.get(appServer.whereIs("single_text_input.html"));
 
@@ -216,6 +219,7 @@ public class BasicKeyboardInterfaceTest extends JUnit4TestBase {
 
   @Test
   @Ignore(IE)
+  @NotYetImplemented(value = MARIONETTE, reason = "https://bugzilla.mozilla.org/show_bug.cgi?id=1422583")
   public void testSelectionSelectByWord() {
     assumeFalse(
         "MacOS has alternative keyboard",

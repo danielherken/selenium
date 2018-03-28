@@ -66,7 +66,7 @@ public abstract class JUnit4TestBase implements WrapsDriver {
   protected Wait<WebDriver> shortWait;
 
   @Before
-  public void prepareEnvironment() throws Exception {
+  public void prepareEnvironment() {
     environment = GlobalTestEnvironment.get(InProcessTestEnvironment.class);
     appServer = environment.getAppServer();
 
@@ -235,7 +235,7 @@ public abstract class JUnit4TestBase implements WrapsDriver {
 
   private void createDriver() {
     driver = actuallyCreateDriver();
-    wait = new WebDriverWait(driver, 30);
+    wait = new WebDriverWait(driver, 10);
     shortWait = new WebDriverWait(driver, 5);
   }
 
@@ -317,12 +317,6 @@ public abstract class JUnit4TestBase implements WrapsDriver {
           }
           if (System.getProperty("webdriver.firefox.marionette") == null ||
               Boolean.getBoolean("webdriver.firefox.marionette")) {
-            return true;
-          }
-          break;
-
-        case PHANTOMJS:
-          if (browser == Browser.phantomjs) {
             return true;
           }
           break;

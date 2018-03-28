@@ -18,37 +18,30 @@
 package org.openqa.selenium.safari;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import com.google.common.collect.ImmutableMap;
-
 import org.junit.Test;
-import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.ImmutableCapabilities;
-
-import java.util.Map;
 
 public class SafariOptionsTest {
 
   @Test
-  public void commonUsagePatternWorks() {
-    SafariOptions options = new SafariOptions().useCleanSession(true);
-    Map<String, ?> caps = options.asMap();
-    assertEquals(((Map<String, ?>) caps.get(SafariOptions.CAPABILITY)).get("cleanSession"), true);
-  }
-
-  @Test
   public void roundTrippingToCapabilitiesAndBackWorks() {
-    SafariOptions expected = new SafariOptions()
-        .useCleanSession(true)
-        .setUseTechnologyPreview(true);
+    SafariOptions expected = new SafariOptions().setUseTechnologyPreview(true);
 
     // Convert to a Map so we can create a standalone capabilities instance, which we then use to
     // create a new set of options. This is the round trip, ladies and gentlemen.
     SafariOptions seen = new SafariOptions(new ImmutableCapabilities(expected.asMap()));
 
     assertEquals(expected, seen);
+  }
+
+  @Test
+  public void canConstructFromCapabilities() {
+    SafariOptions options = new SafariOptions(
+        new ImmutableCapabilities("technologyPreview", true));
+
+    assertTrue(options.getUseTechnologyPreview());
   }
 
 }

@@ -17,13 +17,11 @@
 
 package org.openqa.selenium.remote.http;
 
-import static com.google.common.base.Charsets.UTF_8;
 import static com.google.common.net.HttpHeaders.CONTENT_TYPE;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
 import com.google.common.io.ByteStreams;
 import com.google.common.net.MediaType;
 
@@ -34,16 +32,15 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
-import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
 class HttpMessage {
 
-  private final Multimap<String, String> headers = Multimaps.newListMultimap(
-      Maps.<String, Collection<String>>newHashMap(), Lists::newLinkedList);
+  private final Multimap<String, String> headers = ArrayListMultimap.create();
 
-  private final Map<String, Object> attributes = Maps.newHashMap();
+  private final Map<String, Object> attributes = new HashMap<>();
 
   private InputStream content = new ByteArrayInputStream(new byte[0]);
   private volatile byte[] readContent = null;
@@ -78,7 +75,7 @@ class HttpMessage {
   public String getHeader(String name) {
     return headers.entries().stream()
         .filter(e -> Objects.nonNull(e.getKey()))
-        .filter(e -> e.getKey().toLowerCase().equals(name.toLowerCase()))
+        .filter(e -> e.getKey().equalsIgnoreCase(name.toLowerCase()))
         .map(Map.Entry::getValue)
         .findFirst()
         .orElse(null);
