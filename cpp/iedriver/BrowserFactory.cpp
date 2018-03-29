@@ -385,12 +385,20 @@ namespace webdriver {
 
     if (attached) {
       // Test for zoom level = 100%
+
+      // Always switch to 100% zoom level
+		  VARIANT varIndex;
+		  varIndex.lVal = 100;
+		  varIndex.vt = VT_I4;
+		  process_window_info->pBrowser->ExecWB(OLECMDID_OPTICAL_ZOOM, OLECMDEXECOPT_DONTPROMPTUSER, &varIndex, nullptr);
+
       int zoom_level = 100;
       LOG(DEBUG) << "Ignoring zoom setting: " << this->ignore_zoom_setting_;
       if (!this->ignore_zoom_setting_) {
         zoom_level = this->GetBrowserZoomLevel(process_window_info->pBrowser);
       }
       if (zoom_level != 100) {
+
         std::string zoom_level_error =
           StringUtilities::Format(ZOOM_SETTING_ERROR_MESSAGE, zoom_level);
         LOG(WARN) << zoom_level_error;

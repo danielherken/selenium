@@ -1,4 +1,4 @@
-﻿// Licensed to the Software Freedom Conservancy (SFC) under one
+// Licensed to the Software Freedom Conservancy (SFC) under one
 // or more contributor license agreements. See the NOTICE file
 // distributed with this work for additional information
 // regarding copyright ownership. The SFC licenses this file
@@ -240,6 +240,7 @@ void ScreenshotCommandHandler::GetWindowDimensions(HWND window_handle,
                                                     int* height) {
   RECT window_rect;
   ::GetWindowRect(window_handle, &window_rect);
+
   *width = window_rect.right - window_rect.left;
   *height = window_rect.bottom - window_rect.top;
 }
