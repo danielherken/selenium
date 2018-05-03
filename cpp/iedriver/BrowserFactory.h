@@ -105,6 +105,7 @@ class BrowserFactory {
   bool IsCreateProcessApiAvailable(void);
   void ClearCache(void);
   void InvokeClearCacheUtility(bool use_low_integrity_level);
+  bool fileExists(std::wstring);
 
   bool ignore_protected_mode_settings_;
   bool ignore_zoom_setting_;
@@ -118,6 +119,8 @@ class BrowserFactory {
 
   int ie_major_version_;
   std::wstring ie_executable_location_;
+
+  
 };
 
 } // namespace webdriver

@@ -26,6 +26,8 @@
 #include <shlguid.h>
 #include <shlobj.h>
 
+#include <fstream>
+
 #include "logging.h"
 
 #include "FileUtilities.h"
@@ -308,6 +310,9 @@ namespace webdriver {
       &start_info,
       proc_info);
     if (!create_process_result) {
+
+      LOG(TRACE) << "Create process failed " << GetLastError();
+
       *error_message = StringUtilities::Format(CREATEPROCESS_ERROR_MESSAGE,
         StringUtilities::ToString(command_line));
     }
@@ -1021,6 +1026,11 @@ namespace webdriver {
     LOG(TRACE) << "Entering BrowserFactory::GetExecutableLocation";
 
     this->ie_executable_location_ = L"C:\\Program Files (x86)\\Internet Explorer\\iexplore.exe";
+
+    if (!fileExists(this->ie_executable_location_)) {
+      this->ie_executable_location_ = L"C:\\Program Files\\Internet Explorer\\iexplore.exe";
+    }
+
     return;
   }
 
@@ -1194,6 +1204,12 @@ namespace webdriver {
 
   bool BrowserFactory::IsWindowsVistaOrGreater() {
     return IsWindowsVersionOrGreater(HIBYTE(_WIN32_WINNT_VISTA), LOBYTE(_WIN32_WINNT_VISTA), 0);
+  }
+
+  bool BrowserFactory::fileExists(std::wstring filename)
+  {
+    std::ifstream ifile(filename.c_str());
+    return ifile.good();
   }
 
 
