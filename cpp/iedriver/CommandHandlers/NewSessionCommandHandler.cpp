@@ -358,7 +358,7 @@ void NewSessionCommandHandler::SetTimeoutSettings(const IECommandExecutor& execu
 
 void NewSessionCommandHandler::SetBrowserFactorySettings(const IECommandExecutor& executor, const Json::Value& capabilities) {
   LOG(TRACE) << "Entering NewSessionCommandHandler::SetBrowserFactorySettings";
-  std::string default_initial_url = "http://localhost:" + std::to_string(static_cast<long long>(executor.port())) + "/";
+  std::string default_initial_url = "http://www.example.com"; // "http://localhost:" + std::to_string(static_cast<long long>(executor.port())) + "/";
   if (!capabilities.isNull()) {
     BrowserFactorySettings factory_settings;
     Json::Value ignore_protected_mode_settings = this->GetCapability(capabilities, IGNORE_PROTECTED_MODE_CAPABILITY, Json::booleanValue, false);

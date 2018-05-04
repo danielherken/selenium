@@ -290,6 +290,7 @@ namespace webdriver {
       executable_and_url.append(this->browser_command_line_switches_);
     }
     executable_and_url.append(L" ");
+
     executable_and_url.append(this->initial_browser_url_);
 
     LOG(TRACE) << "IE starting command line is: '" << LOGWSTRING(executable_and_url) << "'.";
