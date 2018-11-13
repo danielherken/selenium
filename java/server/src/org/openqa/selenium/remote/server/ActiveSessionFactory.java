@@ -35,6 +35,7 @@ import com.google.common.collect.ImmutableMap;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.ImmutableCapabilities;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.json.Json;
 import org.openqa.selenium.remote.Dialect;
 
 import java.util.List;
@@ -58,7 +59,7 @@ public class ActiveSessionFactory implements SessionFactory {
   private final static Function<String, Class<?>> CLASS_EXISTS = name -> {
     try {
       return Class.forName(name);
-    } catch (ClassNotFoundException cnfe) {
+    } catch (ClassNotFoundException | NoClassDefFoundError e) {
       return null;
     }
   };
@@ -89,7 +90,7 @@ public class ActiveSessionFactory implements SessionFactory {
         .put(browserName(IE), "org.openqa.selenium.ie.InternetExplorerDriverService")
         .put(containsKey("se:ieOptions"), "org.openqa.selenium.ie.InternetExplorerDriverService")
         .put(browserName(OPERA), "org.openqa.selenium.opera.OperaDriverService")
-        .put(browserName(OPERA_BLINK), "org.openqa.selenium.ie.OperaDriverService")
+        .put(browserName(OPERA_BLINK), "org.openqa.selenium.opera.OperaDriverService")
         .put(browserName(PHANTOMJS), "org.openqa.selenium.phantomjs.PhantomJSDriverService")
         .put(browserName(SAFARI), "org.openqa.selenium.safari.SafariDriverService")
         .put(containsKey(Pattern.compile("^safari\\..*")), "org.openqa.selenium.safari.SafariDriverService")
@@ -169,7 +170,7 @@ public class ActiveSessionFactory implements SessionFactory {
 
   @Override
   public Optional<ActiveSession> apply(Set<Dialect> downstreamDialects, Capabilities caps) {
-    LOG.info("Capabilities are: " + caps);
+    LOG.info("Capabilities are: " + new Json().toJson(caps));
     return factories.stream()
         .filter(factory -> factory.isSupporting(caps))
         .peek(factory -> LOG.info(String.format("Matched factory %s", factory)))

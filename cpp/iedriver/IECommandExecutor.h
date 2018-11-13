@@ -33,14 +33,6 @@
 #define ASYNC_SCRIPT_EXECUTION_TIMEOUT_IN_MILLISECONDS 2000
 #define DEFAULT_FILE_UPLOAD_DIALOG_TIMEOUT_IN_MILLISECONDS 3000
 #define MAX_HTML_DIALOG_RETRIES 5
-#define IGNORE_UNEXPECTED_ALERTS "ignore"
-#define ACCEPT_UNEXPECTED_ALERTS "accept"
-#define DISMISS_UNEXPECTED_ALERTS "dismiss"
-#define ACCEPT_AND_NOTIFY_UNEXPECTED_ALERTS "accept and notify"
-#define DISMISS_AND_NOTIFY_UNEXPECTED_ALERTS "dismiss and notify"
-#define NORMAL_PAGE_LOAD_STRATEGY "normal"
-#define EAGER_PAGE_LOAD_STRATEGY "eager"
-#define NONE_PAGE_LOAD_STRATEGY "none"
 
 namespace webdriver {
 
@@ -70,6 +62,7 @@ class IECommandExecutor : public CWindowImpl<IECommandExecutor>, public IElement
     MESSAGE_HANDLER(WD_WAIT, OnWait)
     MESSAGE_HANDLER(WD_BROWSER_NEW_WINDOW, OnBrowserNewWindow)
     MESSAGE_HANDLER(WD_BROWSER_QUIT, OnBrowserQuit)
+    MESSAGE_HANDLER(WD_BROWSER_CLOSE_WAIT, OnBrowserCloseWait)
     MESSAGE_HANDLER(WD_IS_SESSION_VALID, OnIsSessionValid)
     MESSAGE_HANDLER(WD_NEW_HTML_DIALOG, OnNewHtmlDialog)
     MESSAGE_HANDLER(WD_GET_QUIT_STATUS, OnGetQuitStatus)
@@ -90,6 +83,7 @@ class IECommandExecutor : public CWindowImpl<IECommandExecutor>, public IElement
   LRESULT OnWait(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
   LRESULT OnBrowserNewWindow(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
   LRESULT OnBrowserQuit(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
+  LRESULT OnBrowserCloseWait(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
   LRESULT OnIsSessionValid(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
   LRESULT OnNewHtmlDialog(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
   LRESULT OnGetQuitStatus(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
@@ -218,6 +212,9 @@ class IECommandExecutor : public CWindowImpl<IECommandExecutor>, public IElement
 
   void PopulateElementFinderMethods(void);
 
+  void CreateWaitThread(const std::string& deferred_response);
+  void CreateWaitThread(const std::string& deferred_response,
+                        const bool is_deferred_command_execution);
   bool IsAlertActive(BrowserHandle browser, HWND* alert_handle);
   bool HandleUnexpectedAlert(BrowserHandle browser,
                              HWND alert_handle,

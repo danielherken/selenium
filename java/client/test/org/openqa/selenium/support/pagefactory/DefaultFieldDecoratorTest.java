@@ -41,7 +41,7 @@ import org.openqa.selenium.internal.FindsByLinkText;
 import org.openqa.selenium.internal.FindsByName;
 import org.openqa.selenium.internal.FindsByXPath;
 import org.openqa.selenium.interactions.internal.Locatable;
-import org.openqa.selenium.internal.WrapsElement;
+import org.openqa.selenium.WrapsElement;
 import org.openqa.selenium.support.FindAll;
 import org.openqa.selenium.support.FindBy;
 import org.openqa.selenium.support.FindBys;
@@ -171,7 +171,7 @@ public class DefaultFieldDecoratorTest {
   }
 
   @Test
-  public void testDecoratingProxyImplementsRequiredInterfaces() throws Exception {
+  public void testDecoratingProxyImplementsRequiredInterfaces() {
     final AllDriver driver = mock(AllDriver.class);
     final AllElement element = mock(AllElement.class);
     final Mouse mouse = mock(Mouse.class);

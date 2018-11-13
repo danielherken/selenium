@@ -31,7 +31,6 @@ import static org.openqa.selenium.ie.InternetExplorerDriver.NATIVE_EVENTS;
 import static org.openqa.selenium.ie.InternetExplorerDriver.REQUIRE_WINDOW_FOCUS;
 import static org.openqa.selenium.remote.CapabilityType.BROWSER_NAME;
 import static org.openqa.selenium.remote.CapabilityType.PAGE_LOAD_STRATEGY;
-import static org.openqa.selenium.remote.CapabilityType.PLATFORM;
 import static org.openqa.selenium.remote.CapabilityType.UNHANDLED_PROMPT_BEHAVIOUR;
 
 import com.google.common.base.Preconditions;
@@ -43,13 +42,10 @@ import org.openqa.selenium.Beta;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.PageLoadStrategy;
-import org.openqa.selenium.Platform;
 import org.openqa.selenium.Proxy;
 import org.openqa.selenium.UnexpectedAlertBehaviour;
-import org.openqa.selenium.internal.ElementScrollBehavior;
 import org.openqa.selenium.remote.BrowserType;
 import org.openqa.selenium.remote.CapabilityType;
-import org.openqa.selenium.remote.DesiredCapabilities;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -72,7 +68,7 @@ import java.util.stream.Stream;
 @Beta
 public class InternetExplorerOptions extends MutableCapabilities {
 
-  private final static String IE_OPTIONS = "se:ieOptions";
+  final static String IE_OPTIONS = "se:ieOptions";
 
   private static final String FULL_PAGE_SCREENSHOT = "ie.enableFullPageScreenshot";
   private static final String UPLOAD_DIALOG_TIMEOUT = "ie.fileUploadDialogTimeout";
@@ -95,21 +91,18 @@ public class InternetExplorerOptions extends MutableCapabilities {
       .add(REQUIRE_WINDOW_FOCUS)
       .add(UPLOAD_DIALOG_TIMEOUT)
       .add(VALIDATE_COOKIE_DOCUMENT_TYPE)
+      .add(NATIVE_EVENTS)
       .build();
 
   private Map<String, Object> ieOptions = new HashMap<>();
 
   public InternetExplorerOptions() {
-    this(DesiredCapabilities.internetExplorer());
+    setCapability(BROWSER_NAME, BrowserType.IE);
+    setCapability(IE_OPTIONS, ieOptions);
   }
 
   public InternetExplorerOptions(Capabilities source) {
     super();
-
-    setCapability(IE_OPTIONS, ieOptions);
-    setCapability(BROWSER_NAME, BrowserType.IE);
-    setCapability(PLATFORM, Platform.WINDOWS);
-    setCapability(CapabilityType.ForSeleniumServer.ENSURING_CLEAN_SESSION, true);
 
     merge(source);
   }
@@ -214,8 +207,13 @@ public class InternetExplorerOptions extends MutableCapabilities {
     return amend(INTRODUCE_FLAKINESS_BY_IGNORING_SECURITY_DOMAINS, true);
   }
 
+  @Deprecated
   public InternetExplorerOptions enableNativeEvents() {
     return amend(NATIVE_EVENTS, true);
+  }
+
+  public InternetExplorerOptions disableNativeEvents() {
+    return  amend(NATIVE_EVENTS, false);
   }
 
   public InternetExplorerOptions ignoreZoomSettings() {

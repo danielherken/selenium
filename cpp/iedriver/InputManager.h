@@ -62,7 +62,8 @@ public:
   void Initialize(InputManagerSettings settings);
 
   int PerformInputSequence(BrowserHandle browser_wrapper,
-                           const Json::Value& sequence);
+                           const Json::Value& sequence,
+                           std::string* error_info);
   void Reset(BrowserHandle browser_wrapper);
 
   //void StartPersistentEvents(void);
@@ -117,6 +118,7 @@ public:
   InputState CloneCurrentInputState(void);
   void UpdatePressedKeys(wchar_t character, bool press_key);
   bool IsKeyPressed(wchar_t character);
+  bool IsSingleKey(const std::wstring& input);
 
   void SetupKeyDescriptions(void);
   std::wstring GetKeyDescription(const wchar_t character);

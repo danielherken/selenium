@@ -1,3 +1,46 @@
+3.13.1 (2018-07-20)
+===================
+
+Chrome:
+  * Fixed an issue when empty Chrome options would cause DevToolsActivePort issue (thanks @artplan1)
+
+Remote:
+  * Support detecting local files (thanks @mskvn)
+
+3.13.0 (2018-06-25)
+===================
+
+Ruby:
+  * Address warnings for redefined methods and uninitialized instance variables
+
+Chrome:
+  * Chrome options capabilities updated to use goog:chromeOptions.
+    Note that Selenium now requires ChromeDriver v2.31 at minimum.
+  * Added ability to tell headless Chrome to save files using Driver#download_path= (thanks @pelly)
+
+3.12.0 (2018-05-08)
+===================
+
+Ruby:
+  * Added User-Agent header to requests from Selenium to give remote
+    ends more visibility into distribution of clients (thanks @sah)
+  * Added Selenium::WebDriver::VERSION constant (thanks @sah)
+  * Added changelog link to RubyGems page
+  * Fixed a bug when requests were sent with empty Content-Type,
+    which should instead be application/json (issue #5615 and #5659)
+  * Fixed a bug when failed connection attempt was retried without
+    grace period for remote to resolve its problem (thanks @amckinley42)
+  * Fixed a bug with accidentally removed HasNetworkConnection driver extension
+
+Chrome:
+  * Fixed a bug when deprecation message for using Chrome extensions
+    was incorrectly shown (thanks @treby)
+
+Safari:
+  * Added support getting permissions via Driver#permissions
+  * Added support setting permissions via Driver#permissions=
+  * Added support enabling web inspector via Driver#attach_debugger
+
 3.11.0 (2018-03-11)
 ===================
 

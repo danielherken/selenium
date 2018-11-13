@@ -17,11 +17,9 @@
 
 package org.openqa.selenium.remote.server;
 
-import org.openqa.selenium.remote.http.HttpRequest;
-import org.openqa.selenium.remote.http.HttpResponse;
-
-import java.io.IOException;
-
-public interface CommandHandler {
-  void execute(HttpRequest req, HttpResponse resp) throws IOException;
+/**
+ * @deprecated Use {@link org.openqa.selenium.grid.web.CommandHandler} instead.
+ */
+@Deprecated
+public interface CommandHandler extends org.openqa.selenium.grid.web.CommandHandler {
 }

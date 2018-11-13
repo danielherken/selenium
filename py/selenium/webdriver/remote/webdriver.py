@@ -130,16 +130,18 @@ class WebDriver(object):
              then default LocalFileDetector() will be used.
          - options - instance of a driver options.Options class
         """
-        if desired_capabilities is None:
-            raise WebDriverException("Desired Capabilities can't be None")
-        if not isinstance(desired_capabilities, dict):
-            raise WebDriverException("Desired Capabilities must be a dictionary")
+        capabilities = {}
+        if options is not None:
+            capabilities = options.to_capabilities()
+        if desired_capabilities is not None:
+            if not isinstance(desired_capabilities, dict):
+                raise WebDriverException("Desired Capabilities must be a dictionary")
+            else:
+                capabilities.update(desired_capabilities)
         if proxy is not None:
             warnings.warn("Please use FirefoxOptions to set proxy",
                           DeprecationWarning)
-            proxy.add_to_capabilities(desired_capabilities)
-        if options is not None:
-            desired_capabilities.update(options.to_capabilities())
+            proxy.add_to_capabilities(capabilities)
         self.command_executor = command_executor
         if type(self.command_executor) is bytes or isinstance(self.command_executor, str):
             self.command_executor = RemoteConnection(command_executor, keep_alive=keep_alive)
@@ -151,7 +153,7 @@ class WebDriver(object):
         if browser_profile is not None:
             warnings.warn("Please use FirefoxOptions to set browser profile",
                           DeprecationWarning)
-        self.start_session(desired_capabilities, browser_profile)
+        self.start_session(capabilities, browser_profile)
         self._switch_to = SwitchTo(self)
         self._mobile = Mobile(self)
         self.file_detector = file_detector or LocalFileDetector()
@@ -159,6 +161,12 @@ class WebDriver(object):
     def __repr__(self):
         return '<{0.__module__}.{0.__name__} (session="{1}")>'.format(
             type(self), self.session_id)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.quit()
 
     @contextmanager
     def file_detector_context(self, file_detector_class, *args, **kwargs):
@@ -720,10 +728,12 @@ class WebDriver(object):
         """
         Maximizes the current window that webdriver is using
         """
-        command = Command.MAXIMIZE_WINDOW
-        if self.w3c:
-            command = Command.W3C_MAXIMIZE_WINDOW
-        self.execute(command, {"windowHandle": "current"})
+        params = None
+        command = Command.W3C_MAXIMIZE_WINDOW
+        if not self.w3c:
+            command = Command.MAXIMIZE_WINDOW
+            params = {'windowHandle': 'current'}
+        self.execute(command, params)
 
     def fullscreen_window(self):
         """
@@ -931,10 +941,11 @@ class WebDriver(object):
 
     def find_element(self, by=By.ID, value=None):
         """
-        'Private' method used by the find_element_by_* methods.
+        Find an element given a By strategy and locator. Prefer the find_element_by_* methods when
+        possible.
 
         :Usage:
-            Use the corresponding find_element_by_* instead of this.
+            element = driver.find_element(By.ID, 'foo')
 
         :rtype: WebElement
         """
@@ -956,10 +967,11 @@ class WebDriver(object):
 
     def find_elements(self, by=By.ID, value=None):
         """
-        'Private' method used by the find_elements_by_* methods.
+        Find elements given a By strategy and locator. Prefer the find_elements_by_* methods when
+        possible.
 
         :Usage:
-            Use the corresponding find_elements_by_* instead of this.
+            elements = driver.find_elements(By.CLASS_NAME, 'foo')
 
         :rtype: list of WebElement
         """

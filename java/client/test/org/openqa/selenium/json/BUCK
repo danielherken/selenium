@@ -1,8 +1,7 @@
 java_test(name = 'small-tests',
-  srcs = [
-    'BeanToJsonConverterTest.java',
-    'JsonToBeanConverterTest.java',
-    'JsonTest.java',
+  srcs = glob(['*.java']),
+  labels = [
+    'small',
   ],
   deps = [
     '//java/client/src/org/openqa/selenium:selenium',

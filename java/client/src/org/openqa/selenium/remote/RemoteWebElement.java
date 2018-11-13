@@ -40,8 +40,8 @@ import org.openqa.selenium.internal.FindsByTagName;
 import org.openqa.selenium.internal.FindsByXPath;
 import org.openqa.selenium.internal.HasIdentity;
 import org.openqa.selenium.interactions.internal.Locatable;
-import org.openqa.selenium.internal.WrapsDriver;
-import org.openqa.selenium.internal.WrapsElement;
+import org.openqa.selenium.WrapsDriver;
+import org.openqa.selenium.WrapsElement;
 import org.openqa.selenium.io.Zip;
 
 import java.io.File;
@@ -204,10 +204,7 @@ public class RemoteWebElement implements WebElement, FindsByLinkText, FindsById,
     } catch (ClassCastException ex) {
       throw new WebDriverException("Returned value cannot be converted to List<WebElement>: " + responseValue, ex);
     }
-    for (WebElement element : allElements) {
-      parent.setFoundBy(this, element, using, value);
-    }
-
+    allElements.forEach(element -> parent.setFoundBy(this, element, using, value));
     return allElements;
   }
 

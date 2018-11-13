@@ -25,7 +25,7 @@ import org.openqa.selenium.remote.Response;
 import org.openqa.selenium.remote.http.HttpRequest;
 import org.openqa.selenium.remote.http.HttpResponse;
 import org.openqa.selenium.remote.server.ActiveSession;
-import org.openqa.selenium.remote.server.CommandHandler;
+import org.openqa.selenium.grid.web.CommandHandler;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,7 +44,7 @@ public class UploadFile implements CommandHandler {
 
   @Override
   public void execute(HttpRequest req, HttpResponse resp) throws IOException {
-    Map<?, ?> args = json.toType(req.getContentString(), Json.MAP_TYPE);
+    Map<String, Object> args = json.toType(req.getContentString(), Json.MAP_TYPE);
     String file = (String) args.get("file");
 
     File tempDir = session.getFileSystem().createTempDir("upload", "file");

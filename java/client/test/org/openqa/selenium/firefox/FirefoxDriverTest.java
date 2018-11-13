@@ -49,7 +49,6 @@ import org.openqa.selenium.ParallelTestRunner;
 import org.openqa.selenium.ParallelTestRunner.Worker;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.firefox.internal.ProfilesIni;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.Command;
 import org.openqa.selenium.remote.CommandExecutor;
@@ -95,7 +94,7 @@ public class FirefoxDriverTest extends JUnit4TestBase {
 
   @Test
   @Ignore(value = MARIONETTE, reason = "Assumed to be covered by tests for GeckoDriverService")
-  public void canStartDriverWithSpecifiedBinary() throws IOException {
+  public void canStartDriverWithSpecifiedBinary() {
     FirefoxBinary binary = spy(new FirefoxBinary());
     FirefoxOptions options = new FirefoxOptions()
         .setBinary(binary);
@@ -162,7 +161,7 @@ public class FirefoxDriverTest extends JUnit4TestBase {
 
   @Test
   @Ignore(value = MARIONETTE, reason = "Assumed to be covered by tests for GeckoDriverService")
-  public void canSetBinaryInCapabilities() throws IOException {
+  public void canSetBinaryInCapabilities() {
     FirefoxBinary binary = spy(new FirefoxBinary());
     Capabilities caps = new ImmutableCapabilities(FirefoxDriver.BINARY, binary);
 
@@ -172,7 +171,7 @@ public class FirefoxDriverTest extends JUnit4TestBase {
   }
 
   @Test
-  public void canSetBinaryPathInCapabilities() throws IOException {
+  public void canSetBinaryPathInCapabilities() {
     String binPath = new FirefoxBinary().getPath();
     Capabilities caps = new ImmutableCapabilities(FirefoxDriver.BINARY, binPath);
 
@@ -224,7 +223,7 @@ public class FirefoxDriverTest extends JUnit4TestBase {
   @NeedsFreshDriver
   @NoDriverAfterTest
   @Test
-  public void shouldWaitUntilBrowserHasClosedProperly() throws Exception {
+  public void shouldWaitUntilBrowserHasClosedProperly() {
     driver.get(pages.simpleTestPage);
     driver.quit();
     JUnit4TestBase.removeDriver();
@@ -286,7 +285,7 @@ public class FirefoxDriverTest extends JUnit4TestBase {
   }
 
   @Test
-  public void shouldBeAbleToStartFromProfileWithLogFileSetToStdout() throws IOException {
+  public void shouldBeAbleToStartFromProfileWithLogFileSetToStdout() {
     FirefoxProfile profile = new FirefoxProfile();
     profile.setPreference("webdriver.log.file", "/dev/stdout");
 

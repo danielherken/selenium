@@ -17,8 +17,6 @@
 
 package org.openqa.grid.internal.utils.configuration;
 
-import com.google.gson.annotations.Expose;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -34,40 +32,28 @@ public class GridConfiguration extends StandaloneConfiguration {
   /**
    * Clean up cycle for remote proxies. Default determined by configuration type.
    */
-  @Expose
   // initially defaults to null from type
   public Integer cleanUpCycle;
 
   /**
    * Custom key/value pairs for the hub registry. Default empty.
    */
-  @Expose
   public Map<String, String> custom = new HashMap<>();
-
-  /**
-   * Hostname or IP to use. Defaults to {@code null}. Automatically determined when {@code null}.
-   */
-  @Expose
-  // initially defaults to null from type
-  public String host;
 
   /**
    * Max "browser" sessions a node can handle. Default determined by configuration type.
    */
-  @Expose
   // initially defaults to null from type
   public Integer maxSession;
 
   /**
    * Extra servlets to initialize/use on the hub or node. Default empty.
    */
-  @Expose
   public List<String> servlets = new ArrayList<>();
 
   /**
    * Default servlets to exclude on the hub or node. Default empty.
    */
-  @Expose
   public List<String> withoutServlets = new ArrayList<>();
 
   /**
@@ -87,24 +73,23 @@ public class GridConfiguration extends StandaloneConfiguration {
     }
     super.merge(other);
 
-    // don't merge 'host'
-    if (isMergeAble(other.cleanUpCycle, cleanUpCycle)) {
+    if (isMergeAble(Integer.class, other.cleanUpCycle, cleanUpCycle)) {
       cleanUpCycle = other.cleanUpCycle;
     }
-    if (isMergeAble(other.custom, custom)) {
+    if (isMergeAble(Map.class, other.custom, custom)) {
       if (custom == null) {
         custom = new HashMap<>();
       }
       custom.putAll(other.custom);
     }
-    if (isMergeAble(other.maxSession, maxSession) &&
-        other.maxSession.intValue() > 0) {
+    if (isMergeAble(Integer.class, other.maxSession, maxSession) &&
+        other.maxSession > 0) {
       maxSession = other.maxSession;
     }
-    if (isMergeAble(other.servlets, servlets)) {
+    if (isMergeAble(List.class, other.servlets, servlets)) {
       servlets = other.servlets;
     }
-    if (isMergeAble(other.withoutServlets, withoutServlets)) {
+    if (isMergeAble(List.class, other.withoutServlets, withoutServlets)) {
       withoutServlets = other.withoutServlets;
     }
   }
@@ -119,13 +104,22 @@ public class GridConfiguration extends StandaloneConfiguration {
            withoutServlets.contains(servlet.getCanonicalName());
   }
 
+  protected void serializeFields(Map<String, Object> appendTo) {
+    super.serializeFields(appendTo);
+
+    appendTo.put("cleanUpCycle", cleanUpCycle);
+    appendTo.put("custom", custom);
+    appendTo.put("maxSession", maxSession);
+    appendTo.put("servlets", servlets);
+    appendTo.put("withoutServlets", withoutServlets);
+  }
+
   @Override
   public String toString(String format) {
     StringBuilder sb = new StringBuilder();
     sb.append(super.toString(format));
     sb.append(toString(format, "cleanUpCycle", cleanUpCycle));
     sb.append(toString(format, "custom", custom));
-    sb.append(toString(format, "host", host));
     sb.append(toString(format, "maxSession", maxSession));
     sb.append(toString(format, "servlets", servlets));
     sb.append(toString(format, "withoutServlets", withoutServlets));

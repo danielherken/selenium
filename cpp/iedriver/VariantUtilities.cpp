@@ -79,6 +79,10 @@ bool VariantUtilities::VariantIsElement(VARIANT value) {
 }
 
 bool VariantUtilities::VariantIsArray(VARIANT value) {
+  if (value.vt != VT_DISPATCH) {
+    return false;
+  }
+
   std::wstring type_name = GetVariantObjectTypeName(value);
 
   // If the name is DispStaticNodeList, we can be pretty sure it's an array
@@ -97,7 +101,7 @@ bool VariantUtilities::VariantIsArray(VARIANT value) {
   // Closure library.
   // IMPORTANT: Using this script, user-defined objects with a length
   // property defined will be seen as arrays instead of objects.
-  if (type_name == L"JScriptTypeInfo") {
+  if (type_name == L"JScriptTypeInfo" || type_name == L"") {
     LOG(DEBUG) << "Result type is JScriptTypeInfo";
     LPOLESTR length_property_name = L"length";
     DISPID dispid_length = 0;
@@ -115,6 +119,9 @@ bool VariantUtilities::VariantIsArray(VARIANT value) {
 }
 
 bool VariantUtilities::VariantIsObject(VARIANT value) {
+  if (value.vt != VT_DISPATCH) {
+    return false;
+  }
   std::wstring type_name = GetVariantObjectTypeName(value);
   if (type_name == L"JScriptTypeInfo") {
     return true;
@@ -249,7 +256,23 @@ int VariantUtilities::ConvertVariantToJsonValue(IElementManager* element_manager
     } else {
       LOG(INFO) << "Unknown type of dispatch is found in result, assuming IHTMLElement";
       CComPtr<IHTMLElement> node;
-      variant_value.pdispVal->QueryInterface<IHTMLElement>(&node);
+      HRESULT hr = variant_value.pdispVal->QueryInterface<IHTMLElement>(&node);
+      if (FAILED(hr)) {
+        CComPtr<IHTMLWindow2> window_node;
+        hr = variant_value.pdispVal->QueryInterface<IHTMLWindow2>(&window_node);
+        if (SUCCEEDED(hr) && window_node) {
+          // TODO: We need to track window objects and return a custom JSON
+          // object according to the spec, but that will require a fair
+          // amount of refactoring.
+          LOG(DEBUG) << "Returning window object from JavaScript is not supported";
+        }
+
+        // We've already done our best to check if the object is an array or
+        // an object. We now know it doesn't implement IHTMLElement. We have
+        // no choice but to throw up our hands here.
+        LOG(WARN) << "Dispatch value is not recognized as a JavaScript object, array, or element reference";
+        return EUNEXPECTEDJSERROR;
+      }
       ElementHandle element_wrapper;
       bool element_added = element_manager->AddManagedElement(node, &element_wrapper);
       Json::Value element_value(Json::objectValue);

@@ -29,7 +29,7 @@ import org.openqa.selenium.remote.Response;
 import org.openqa.selenium.remote.http.HttpRequest;
 import org.openqa.selenium.remote.http.HttpResponse;
 import org.openqa.selenium.remote.server.ActiveSession;
-import org.openqa.selenium.remote.server.CommandHandler;
+import org.openqa.selenium.grid.web.CommandHandler;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -57,7 +57,7 @@ public class GetLogTypes implements CommandHandler {
     types.add(LogType.SERVER);
 
     if (upRes.getStatus() == HTTP_OK) {
-      Map<?, ?> upstream = json.toType(upRes.getContentString(), Json.MAP_TYPE);
+      Map<String, Object> upstream = json.toType(upRes.getContentString(), Json.MAP_TYPE);
       Object raw = upstream.get("value");
       if (raw instanceof Collection) {
         ((Collection<?>) raw).stream().map(String::valueOf).forEach(types::add);

@@ -28,7 +28,7 @@ import org.openqa.selenium.remote.Response;
 import org.openqa.selenium.remote.http.HttpRequest;
 import org.openqa.selenium.remote.http.HttpResponse;
 import org.openqa.selenium.remote.server.ActiveSession;
-import org.openqa.selenium.remote.server.CommandHandler;
+import org.openqa.selenium.grid.web.CommandHandler;
 import org.openqa.selenium.remote.server.log.LoggingManager;
 
 import java.io.IOException;
@@ -49,7 +49,7 @@ public class GetLogsOfType implements CommandHandler {
   public void execute(HttpRequest req, HttpResponse resp) throws IOException {
     String originalPayload = req.getContentString();
 
-    Map<?, ?> args = json.toType(originalPayload, Json.MAP_TYPE);
+    Map<String, Object> args = json.toType(originalPayload, Json.MAP_TYPE);
     String type = (String) args.get("type");
 
     if (!LogType.SERVER.equals(type)) {

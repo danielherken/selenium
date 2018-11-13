@@ -1,5 +1,6 @@
 # BUILD FILE SYNTAX: SKYLARK
 load("//:selenium-version.bzl", "SE_VERSION")
+load("//java:rules.bzl", "java_library")
 
 java_library(
   name = 'api',
@@ -45,6 +46,7 @@ java_library(
 java_library(name = 'remote',
   maven_coords = 'org.seleniumhq.selenium:selenium-remote-driver:' + SE_VERSION,
   maven_pom_template = '//java/client/src/org/openqa/selenium:template-pom',
+  module_info = 'module-info.txt',
   srcs = [
     'Augmenter.java',
     'AugmenterProvider.java',
@@ -71,9 +73,9 @@ java_library(name = 'remote',
   visibility = ['PUBLIC'],
 )
 
-
 java_library(name = 'remote-lib',
   srcs = [
+    'AcceptedW3CCapabilityKeys.java',
     'CommandCodec.java',
     'CommandInfo.java',
     'Dialect.java',
@@ -81,7 +83,6 @@ java_library(name = 'remote-lib',
     'ErrorHandler.java',
     'ExecuteMethod.java',
     'FileDetector.java',
-    'Gecko013ProtocolResponse.java',
     'HandshakeResponse.java',
     'HttpCommandExecutor.java',
     'InitialHandshakeResponse.java',
@@ -96,6 +97,7 @@ java_library(name = 'remote-lib',
     'RemoteStatus.java',
     'RemoteTouchScreen.java',
     'RemoteWebDriver.java',
+    'RemoteWebDriverBuilder.java',
     'RemoteWebElement.java',
     'ResponseCodec.java',
     'UnreachableBrowserException.java',

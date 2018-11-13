@@ -20,6 +20,7 @@ package org.openqa.selenium.firefox;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
@@ -28,6 +29,7 @@ import com.google.common.io.ByteStreams;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.net.PortProber;
+import org.openqa.selenium.remote.BrowserType;
 import org.openqa.selenium.remote.service.DriverService;
 
 import java.io.File;
@@ -54,8 +56,11 @@ public class GeckoDriverService extends DriverService {
    * @param environment The environment for the launched server.
    * @throws IOException If an I/O error occurs.
    */
-  public GeckoDriverService(File executable, int port, ImmutableList<String> args,
-                            ImmutableMap<String, String> environment) throws IOException {
+  public GeckoDriverService(
+      File executable,
+      int port,
+      ImmutableList<String> args,
+      ImmutableMap<String, String> environment) throws IOException {
     super(executable, port, args, environment);
   }
 
@@ -68,11 +73,11 @@ public class GeckoDriverService extends DriverService {
    * @return A new GeckoDriverService using the default configuration.
    */
   public static GeckoDriverService createDefaultService() {
-    return new Builder().usingAnyFreePort().build();
+    return new Builder().build();
   }
 
   static GeckoDriverService createDefaultService(Capabilities caps) {
-    Builder builder = new Builder().usingAnyFreePort();
+    Builder builder = new Builder();
 
     Object binary = caps.getCapability(FirefoxDriver.BINARY);
     if (binary != null) {
@@ -105,6 +110,7 @@ public class GeckoDriverService extends DriverService {
   /**
    * Builder used to configure new {@link GeckoDriverService} instances.
    */
+  @AutoService(DriverService.Builder.class)
   public static class Builder extends DriverService.Builder<
     GeckoDriverService, GeckoDriverService.Builder> {
 
@@ -121,6 +127,27 @@ public class GeckoDriverService extends DriverService {
     @Deprecated
     public Builder(FirefoxBinary binary) {
       this.firefoxBinary = binary;
+    }
+
+    @Override
+    public int score(Capabilities capabilites) {
+      int score = 0;
+
+      if (capabilites.getCapability(FirefoxDriver.MARIONETTE) == Boolean.FALSE) {
+        return 0;  // We're not meant for this one.
+      }
+
+      if (BrowserType.FIREFOX.equals(capabilites.getBrowserName())) {
+        score++;
+      }
+
+      if (capabilites.getCapability(FirefoxOptions.FIREFOX_OPTIONS) != null) {
+        score++;
+      }
+
+      // This is the legacy firefox driver that they've asked for.
+
+      return score;
     }
 
     /**

@@ -43,6 +43,12 @@
 
 namespace webdriver {
 
+struct WaitThreadContext {
+  HWND window_handle;
+  bool is_deferred_command;
+  LPSTR deferred_response;
+};
+
 LRESULT IECommandExecutor::OnCreate(UINT uMsg,
                                     WPARAM wParam,
                                     LPARAM lParam,
@@ -79,6 +85,7 @@ LRESULT IECommandExecutor::OnCreate(UINT uMsg,
   this->async_script_timeout_ = 30000;
   this->page_load_timeout_ = 300000;
   this->is_waiting_ = false;
+  this->is_quitting_ = false;
   this->page_load_strategy_ = "normal";
   this->file_upload_dialog_timeout_ = DEFAULT_FILE_UPLOAD_DIALOG_TIMEOUT_IN_MILLISECONDS;
 
@@ -173,39 +180,43 @@ LRESULT IECommandExecutor::OnWait(UINT uMsg,
                                   BOOL& bHandled) {
   LOG(TRACE) << "Entering IECommandExecutor::OnWait";
 
+  LPCSTR str = reinterpret_cast<LPCSTR>(lParam);
+  std::string deferred_response(str);
+  delete[] str;
+
+  bool is_single_wait = (wParam == 0);
+
   BrowserHandle browser;
   int status_code = this->GetCurrentBrowser(&browser);
   if (status_code == WD_SUCCESS && !browser->is_closing()) {
     if (this->page_load_timeout_ >= 0 && this->wait_timeout_ < clock()) {
       Response timeout_response;
-      timeout_response.SetErrorResponse(ERROR_WEBDRIVER_TIMEOUT, "Timed out waiting for page to load.");
+      timeout_response.SetErrorResponse(ERROR_WEBDRIVER_TIMEOUT,
+                                        "Timed out waiting for page to load.");
       this->serialized_response_ = timeout_response.Serialize();
       this->is_waiting_ = false;
       browser->set_wait_required(false);
     } else {
       this->is_waiting_ = !(browser->Wait(this->page_load_strategy_));
-      if (this->is_waiting_) {
-        // If we are still waiting, we need to wait a bit then post a message to
-        // ourselves to run the wait again. However, we can't wait using Sleep()
-        // on this thread. This call happens in a message loop, and we would be 
-        // unable to process the COM events in the browser if we put this thread
-        // to sleep.
-        unsigned int thread_id = 0;
-        HANDLE thread_handle = reinterpret_cast<HANDLE>(_beginthreadex(NULL,
-                                                        0,
-                                                        &IECommandExecutor::WaitThreadProc,
-                                                        (void *)this->m_hWnd,
-                                                        0,
-                                                        &thread_id));
-        if (thread_handle != NULL) {
-          ::CloseHandle(thread_handle);
+      HWND alert_handle = NULL;
+      if (this->IsAlertActive(browser, &alert_handle)) {
+        LOG(WARN) << "Found alert";
+      }
+      if (is_single_wait) {
+        this->is_waiting_ = false;
+      } else {
+        if (this->is_waiting_) {
+          this->CreateWaitThread(deferred_response);
         } else {
-          LOGERR(DEBUG) << "Unable to create waiter thread";
+          LOG(DEBUG) << "Setting serialized response to " << deferred_response;
+          this->serialized_response_ = deferred_response;
         }
       }
     }
   } else {
     this->is_waiting_ = false;
+    LOG(DEBUG) << "Setting serialized response to " << deferred_response;
+    this->serialized_response_ = deferred_response;
   }
   return 0;
 }
@@ -245,6 +256,38 @@ LRESULT IECommandExecutor::OnBrowserNewWindow(UINT uMsg,
   return 0;
 }
 
+LRESULT IECommandExecutor::OnBrowserCloseWait(UINT uMsg,
+                                              WPARAM wParam,
+                                              LPARAM lParam,
+                                              BOOL& bHandled) {
+  LOG(TRACE) << "Entering IECommandExecutor::OnBrowserCloseWait";
+
+  LPCSTR str = reinterpret_cast<LPCSTR>(lParam);
+  std::string browser_id(str);
+  delete[] str;
+  BrowserMap::iterator found_iterator = this->managed_browsers_.find(browser_id);
+  if (found_iterator != this->managed_browsers_.end()) {
+    // If there's still an alert window active, repost this message to
+    // ourselves, since the alert will be handled either automatically or
+    // manually by the user.
+    HWND alert_handle;
+    if (this->IsAlertActive(found_iterator->second, &alert_handle)) {
+      Alert dialog(found_iterator->second, alert_handle);
+      if (!dialog.is_standard_alert()) {
+        dialog.Accept();
+      }
+    } else {
+      LPSTR message_payload = new CHAR[browser_id.size() + 1];
+      strcpy_s(message_payload, browser_id.size() + 1, browser_id.c_str());
+      ::PostMessage(this->m_hWnd,
+                    WD_BROWSER_CLOSE_WAIT,
+                    NULL,
+                    reinterpret_cast<LPARAM>(message_payload));
+    }
+  }
+  return 0;
+}
+
 LRESULT IECommandExecutor::OnBrowserQuit(UINT uMsg,
                                          WPARAM wParam,
                                          LPARAM lParam,
@@ -256,6 +299,10 @@ LRESULT IECommandExecutor::OnBrowserQuit(UINT uMsg,
   delete[] str;
   BrowserMap::iterator found_iterator = this->managed_browsers_.find(browser_id);
   if (found_iterator != this->managed_browsers_.end()) {
+    bool is_explicit_close = found_iterator->second->is_closing();
+    if (is_explicit_close) {
+      this->is_waiting_ = false;
+    }
     // If there's still an alert window active, repost this message to
     // ourselves, since the alert will be handled either automatically or
     // manually by the user.
@@ -273,6 +320,19 @@ LRESULT IECommandExecutor::OnBrowserQuit(UINT uMsg,
       if (this->managed_browsers_.size() == 0) {
         this->current_browser_id_ = "";
       }
+    }
+    if (is_explicit_close && !this->is_quitting_) {
+      Json::Value handles(Json::arrayValue);
+      std::vector<std::string> handle_list;
+      this->GetManagedBrowserHandles(&handle_list);
+      std::vector<std::string>::const_iterator handle_iterator = handle_list.begin();
+      for (; handle_iterator != handle_list.end(); ++handle_iterator) {
+        handles.append(*handle_iterator);
+      }
+
+      Response close_window_response;
+      close_window_response.SetSuccessResponse(handles);
+      this->serialized_response_ = close_window_response.Serialize();
     }
   } else {
     LOG(WARN) << "Unable to find browser to quit with ID " << browser_id;
@@ -496,9 +556,29 @@ LRESULT IECommandExecutor::OnScheduleRemoveManagedElement(UINT uMsg,
 
 unsigned int WINAPI IECommandExecutor::WaitThreadProc(LPVOID lpParameter) {
   LOG(TRACE) << "Entering IECommandExecutor::WaitThreadProc";
-  HWND window_handle = reinterpret_cast<HWND>(lpParameter);
+  WaitThreadContext* thread_context = reinterpret_cast<WaitThreadContext*>(lpParameter);
+  HWND window_handle = thread_context->window_handle;
+  bool is_deferred_command = thread_context->is_deferred_command;
+  std::string deferred_response(thread_context->deferred_response);
+  delete thread_context->deferred_response;
+  delete thread_context;
+
+  LPSTR message_payload = new CHAR[deferred_response.size() + 1];
+  strcpy_s(message_payload,
+           deferred_response.size() + 1,
+           deferred_response.c_str());
+
   ::Sleep(WAIT_TIME_IN_MILLISECONDS);
-  ::PostMessage(window_handle, WD_WAIT, NULL, NULL);
+  ::PostMessage(window_handle,
+                WD_WAIT,
+                static_cast<WPARAM>(deferred_response.size()),
+                reinterpret_cast<LPARAM>(message_payload));
+  if (is_deferred_command) {
+    // This wait is requested by the automatic handling of a user prompt
+    // before a command was executed, so re-queue the command execution
+    // for after the wait.
+    ::PostMessage(window_handle, WD_EXEC_COMMAND, NULL, NULL);
+  }
   return 0;
 }
 
@@ -612,22 +692,37 @@ void IECommandExecutor::DispatchCommand() {
               command_type == webdriver::CommandType::SwitchToWindow) {
             LOG(DEBUG) << "Alert is detected, and the sent command is valid";
           } else {
-            LOG(DEBUG) << "Unexpected alert is detected, and the sent command is invalid when an alert is present";
+            LOG(DEBUG) << "Unexpected alert is detected, and the sent command "
+                       << "is invalid when an alert is present";
             std::string alert_text;
             bool is_quit_command = command_type == webdriver::CommandType::Quit;
             bool is_notify_unexpected_alert = this->HandleUnexpectedAlert(browser,
                                                                           alert_handle,
                                                                           is_quit_command,
                                                                           &alert_text);
-            if (!is_quit_command && is_notify_unexpected_alert) {
-              // To keep pace with what Firefox does, we'll return the text of the
-              // alert in the error response.
-              response.SetErrorResponse(EUNEXPECTEDALERTOPEN, "Modal dialog present");
-              response.AddAdditionalData("text", alert_text);
-              this->serialized_response_ = response.Serialize();
-              return;
+            if (!is_quit_command) {
+              if (is_notify_unexpected_alert) {
+                // To keep pace with what the specification suggests, we'll
+                // return the text of the alert in the error response.
+                response.SetErrorResponse(EUNEXPECTEDALERTOPEN,
+                                          "Modal dialog present with text: " + alert_text);
+                response.AddAdditionalData("text", alert_text);
+                this->serialized_response_ = response.Serialize();
+                return;
+              } else {
+                LOG(DEBUG) << "Command other than quit was issued, and option "
+                           << "to not notify was specified. Continuing with "
+                           << "command after automatically closing alert.";
+                // Push a wait cycle, then re-execute the current command (which
+                // hasn't actually been executed yet). Note that an empty string
+                // for the deferred response parameter of CreateWaitThread will
+                // re-queue the execution of the command.
+                this->CreateWaitThread("", true);
+                return;
+              }
             } else {
-              LOG(DEBUG) << "Quit command was issued. Continuing with command after automatically closing alert.";
+                LOG(DEBUG) << "Quit command was issued. Continuing with "
+                           << "command after automatically closing alert.";
             }
           }
         }
@@ -640,22 +735,45 @@ void IECommandExecutor::DispatchCommand() {
 
     status_code = this->GetCurrentBrowser(&browser);
     if (status_code == WD_SUCCESS) {
-      this->is_waiting_ = browser->wait_required();
-      if (this->is_waiting_) {
+      if (browser->wait_required()) {
+        // Case 1: The command handler has explicitly asked to wait for page
+        // load, so the executor must wait for page load or timeout.
+        this->is_waiting_ = true;
         if (this->page_load_timeout_ >= 0) {
           this->wait_timeout_ = clock() + (static_cast<int>(this->page_load_timeout_) / 1000 * CLOCKS_PER_SEC);
         }
-        ::PostMessage(this->m_hWnd, WD_WAIT, NULL, NULL);
-      } else {
-        HWND script_executor_handle = browser->script_executor_handle();
-        this->is_waiting_ = script_executor_handle != NULL;
-        if (this->is_waiting_) {
-          if (this->async_script_timeout_ >= 0) {
-            this->wait_timeout_ = clock() + (static_cast<int>(this->async_script_timeout_) / 1000 * CLOCKS_PER_SEC);
-          }
-          ::PostMessage(this->m_hWnd, WD_SCRIPT_WAIT, NULL, NULL);
-          return;
+        std::string deferred_response = response.Serialize();
+        LOG(DEBUG) << "Command handler requested wait. This will cause a minimal wait of at least 50 milliseconds.";
+        this->CreateWaitThread(deferred_response);
+        return;
+      } else if (browser->script_executor_handle() != NULL) {
+        // Case 2: There is a pending asynchronous JavaScript execution in
+        // progress, so the executor must wait for the script to complete
+        // or a timeout.
+        this->is_waiting_ = true;
+        if (this->async_script_timeout_ >= 0) {
+          this->wait_timeout_ = clock() + (static_cast<int>(this->async_script_timeout_) / 1000 * CLOCKS_PER_SEC);
         }
+        LOG(DEBUG) << "Awaiting completion of in-progress asynchronous JavaScript execution.";
+        ::PostMessage(this->m_hWnd, WD_SCRIPT_WAIT, NULL, NULL);
+        return;
+      } else if (browser->is_closing()) {
+        // Case 3: The browser window is closing, so the executor must
+        // wait for the browser window to be closed and removed from the
+        // list of managed browser windows.
+        LOG(DEBUG) << "Browser is closing; awaiting close.";
+        LPSTR message_payload = new CHAR[browser->browser_id().size() + 1];
+        strcpy_s(message_payload,
+                 browser->browser_id().size() + 1,
+                 browser->browser_id().c_str());
+
+        ::Sleep(WAIT_TIME_IN_MILLISECONDS);
+        ::PostMessage(this->m_hWnd,
+                      WD_BROWSER_CLOSE_WAIT,
+                      NULL,
+                      reinterpret_cast<LPARAM>(message_payload));
+        this->is_waiting_ = true;
+        return;
       }
     } else {
       if (this->current_command_.command_type() != webdriver::CommandType::Quit) {
@@ -665,6 +783,46 @@ void IECommandExecutor::DispatchCommand() {
   }
 
   this->serialized_response_ = response.Serialize();
+  LOG(DEBUG) << "Setting serialized response to " << this->serialized_response_;
+  LOG(DEBUG) << "Is waiting flag: " << this->is_waiting_ ? "true" : "false";
+}
+
+void IECommandExecutor::CreateWaitThread(const std::string& deferred_response) {
+  this->CreateWaitThread(deferred_response, false);
+}
+
+void IECommandExecutor::CreateWaitThread(const std::string& deferred_response,
+                                         const bool is_deferred_command_execution) {
+  // If we are still waiting, we need to wait a bit then post a message to
+  // ourselves to run the wait again. However, we can't wait using Sleep()
+  // on this thread. This call happens in a message loop, and we would be
+  // unable to process the COM events in the browser if we put this thread
+  // to sleep.
+  LOG(DEBUG) << "Creating wait thread with deferred response of `" << deferred_response << "`";
+  if (is_deferred_command_execution) {
+    LOG(DEBUG) << "Command execution will be rescheduled.";
+  }
+  WaitThreadContext* thread_context = new WaitThreadContext;
+  thread_context->window_handle = this->m_hWnd;
+  thread_context->is_deferred_command = is_deferred_command_execution;
+  thread_context->deferred_response = new CHAR[deferred_response.size() + 1];
+  strcpy_s(thread_context->deferred_response,
+           deferred_response.size() + 1,
+           deferred_response.c_str());
+
+  unsigned int thread_id = 0;
+  HANDLE thread_handle = reinterpret_cast<HANDLE>(_beginthreadex(NULL,
+                                                                 0,
+                                                                 &IECommandExecutor::WaitThreadProc,
+                                                                 reinterpret_cast<void*>(thread_context),
+                                                                 0,
+                                                                 &thread_id));
+  if (thread_handle != NULL) {
+    ::CloseHandle(thread_handle);
+  }
+  else {
+    LOGERR(DEBUG) << "Unable to create waiter thread";
+  }
 }
 
 bool IECommandExecutor::IsAlertActive(BrowserHandle browser, HWND* alert_handle) {
@@ -694,6 +852,12 @@ bool IECommandExecutor::HandleUnexpectedAlert(BrowserHandle browser,
   LOG(TRACE) << "Entering IECommandExecutor::HandleUnexpectedAlert";
   Alert dialog(browser, alert_handle);
   *alert_text = dialog.GetText();
+  if (!dialog.is_standard_alert()) {
+    // The dialog was non-standard. The most common case of this is
+    // an onBeforeUnload dialog, which must be accepted to continue.
+    dialog.Accept();
+    return false;
+  }
   if (this->unexpected_alert_behavior_ == ACCEPT_UNEXPECTED_ALERTS ||
       this->unexpected_alert_behavior_ == ACCEPT_AND_NOTIFY_UNEXPECTED_ALERTS) {
     LOG(DEBUG) << "Automatically accepting the alert";
@@ -718,6 +882,7 @@ bool IECommandExecutor::HandleUnexpectedAlert(BrowserHandle browser,
     this->unexpected_alert_behavior_ == IGNORE_UNEXPECTED_ALERTS ||
     this->unexpected_alert_behavior_ == DISMISS_AND_NOTIFY_UNEXPECTED_ALERTS ||
     this->unexpected_alert_behavior_ == ACCEPT_AND_NOTIFY_UNEXPECTED_ALERTS;
+  is_notify_unexpected_alert = is_notify_unexpected_alert && dialog.is_standard_alert();
   return is_notify_unexpected_alert;
 }
 

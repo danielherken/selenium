@@ -18,11 +18,9 @@
 package org.openqa.grid.internal.utils;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.openqa.selenium.json.Json.MAP_TYPE;
 import static org.openqa.selenium.remote.http.HttpMethod.GET;
 import static org.openqa.selenium.remote.http.HttpMethod.POST;
-
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 import org.openqa.grid.common.RegistrationRequest;
 import org.openqa.grid.common.exception.GridConfigurationException;
@@ -36,12 +34,15 @@ import org.openqa.grid.web.servlet.ResourceServlet;
 import org.openqa.grid.web.utils.ExtraServletUtil;
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.json.Json;
+import org.openqa.selenium.json.JsonInput;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.http.HttpClient;
 import org.openqa.selenium.remote.http.HttpRequest;
 import org.openqa.selenium.remote.http.HttpResponse;
 import org.openqa.selenium.remote.server.log.LoggingManager;
 
+import java.io.Reader;
+import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.InvalidParameterException;
@@ -166,8 +167,14 @@ public class SelfRegisteringRemote {
    * - register again every X ms is specified in the config of the node.
    */
   public void startRegistrationProcess() {
+    // don't advertise that the remote (node) is bound to all IPv4 interfaces (default behavior)
+    if (registrationRequest.getConfiguration().host.equals("0.0.0.0")) {
+      // remove the value and call fixUpHost to determine the address of a public (non-loopback) IPv4 interface
+      registrationRequest.getConfiguration().host = null;
+      registrationRequest.getConfiguration().fixUpHost();
+    }
     fixUpId();
-    LOG.fine("Using the json request : " + registrationRequest.toJson());
+    LOG.fine("Using the json request : " + new Json().toJson(registrationRequest));
 
     Boolean register = registrationRequest.getConfiguration().register;
     if (register == null) {
@@ -263,8 +270,9 @@ public class SelfRegisteringRemote {
         }
 
         try {
-          LOG.info("Updating the node configuration from the hub");
+          LOG.fine("Updating the node configuration from the hub");
           GridHubConfiguration hubConfiguration = getHubConfiguration();
+          LOG.fine("Hub configuration: " + new Json().toJson(hubConfiguration));
           // the node can not set these values. They must come from the hub
           if (hubConfiguration.timeout != null && hubConfiguration.timeout >= 0) {
             registrationRequest.getConfiguration().timeout = hubConfiguration.timeout;
@@ -272,6 +280,7 @@ public class SelfRegisteringRemote {
           if (hubConfiguration.browserTimeout != null && hubConfiguration.browserTimeout >= 0) {
             registrationRequest.getConfiguration().browserTimeout = hubConfiguration.browserTimeout;
           }
+          LOG.fine("Updated node configuration: " + new Json().toJson(registrationRequest.getConfiguration()));
         } catch (Exception e) {
           LOG.warning(
               "error getting the parameters from the hub. The node may end up with wrong timeouts." + e
@@ -282,8 +291,6 @@ public class SelfRegisteringRemote {
       } catch (Exception e) {
         throw new GridException("Error sending the registration request: " + e.getMessage());
       }
-    } else {
-      LOG.fine("The node is already present on the hub. Skipping registration.");
     }
 
   }
@@ -318,7 +325,7 @@ public class SelfRegisteringRemote {
     hasId = true;
   }
 
-  void updateConfigWithRealPort() throws MalformedURLException {
+  void updateConfigWithRealPort() {
     if (registrationRequest.getConfiguration().port != 0) {
       return;
     }
@@ -328,7 +335,6 @@ public class SelfRegisteringRemote {
   /**
    * uses the hub API to get some of its configuration.
    * @return json object of the current hub configuration
-   * @throws Exception
    */
   private GridHubConfiguration getHubConfiguration() throws Exception {
     String hubApi =
@@ -341,7 +347,10 @@ public class SelfRegisteringRemote {
     HttpRequest request = new HttpRequest(GET, url);
 
     HttpResponse response = client.execute(request);
-    return GridHubConfiguration.loadFromJSON(extractObject(response));
+    try (Reader reader = new StringReader(response.getContentString());
+        JsonInput jsonInput = new Json().newInput(reader)) {
+      return GridHubConfiguration.loadFromJSON(jsonInput);
+    }
   }
 
   private boolean isAlreadyRegistered(RegistrationRequest node) {
@@ -362,14 +371,14 @@ public class SelfRegisteringRemote {
       if (response.getStatus() != 200) {
         throw new GridException(String.format("The hub responded with %s", response.getStatus()));
       }
-      JsonObject o = extractObject(response);
-      return o.get("success").getAsBoolean();
+      Map<String, Object> o = extractObject(response);
+      return (Boolean) o.get("success");
     } catch (Exception e) {
       throw new GridException("The hub is down or not responding: " + e.getMessage());
     }
   }
 
-  private static JsonObject extractObject(HttpResponse resp) {
-      return new JsonParser().parse(resp.getContentString()).getAsJsonObject();
+  private static Map<String, Object> extractObject(HttpResponse resp) {
+    return new Json().toType(resp.getContentString(), MAP_TYPE);
   }
 }

@@ -22,6 +22,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.openqa.selenium.firefox.FirefoxOptions.FIREFOX_OPTIONS;
 import static org.openqa.selenium.firefox.FirefoxProfile.PORT_PREFERENCE;
 
+import com.google.auto.service.AutoService;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -33,6 +34,7 @@ import org.openqa.selenium.firefox.internal.ClasspathExtension;
 import org.openqa.selenium.firefox.internal.Extension;
 import org.openqa.selenium.firefox.internal.FileExtension;
 import org.openqa.selenium.net.UrlChecker;
+import org.openqa.selenium.remote.BrowserType;
 import org.openqa.selenium.remote.service.DriverService;
 
 import java.io.File;
@@ -175,7 +177,7 @@ public class XpiDriverService extends DriverService {
    */
   public static XpiDriverService createDefaultService() {
     try {
-      return new XpiDriverService.Builder().usingAnyFreePort().build();
+      return new Builder().build();
     } catch (WebDriverException e) {
       throw new IllegalStateException(e.getMessage(), e.getCause());
     }
@@ -239,13 +241,15 @@ public class XpiDriverService extends DriverService {
     return new Builder();
   }
 
+  @AutoService(DriverService.Builder.class)
   public static class Builder extends DriverService.Builder<XpiDriverService, XpiDriverService.Builder> {
 
     private FirefoxBinary binary = null;
     private FirefoxProfile profile = null;
 
-    private Builder() {
-      // Only available through the static factory method in the XpiDriverService
+    @Override
+    public int score(Capabilities capabilites) {
+      return capabilites.getCapability(FirefoxDriver.MARIONETTE) == Boolean.FALSE ? 5 : 0;
     }
 
     public Builder withBinary(FirefoxBinary binary) {

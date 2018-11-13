@@ -144,7 +144,7 @@ public abstract class BaseAugmenterTest {
   }
 
   @Test
-  public void shouldAllowAnElementToBeAugmented() throws Exception {
+  public void shouldAllowAnElementToBeAugmented() {
     RemoteWebElement element = new RemoteWebElement();
     element.setId("1234");
 
@@ -298,7 +298,7 @@ public abstract class BaseAugmenterTest {
     }
   }
 
-  private interface MagicNumberHolder {
+  public interface MagicNumberHolder {
     public int getMagicNumber();
     public void setMagicNumber(int number);
   }

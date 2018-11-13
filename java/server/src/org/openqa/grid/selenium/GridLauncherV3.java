@@ -35,7 +35,8 @@ import org.openqa.grid.internal.utils.configuration.StandaloneConfiguration;
 import org.openqa.grid.shared.Stoppable;
 import org.openqa.grid.web.Hub;
 import org.openqa.grid.web.servlet.DisplayHelpServlet;
-import org.openqa.selenium.internal.BuildInfo;
+import org.openqa.selenium.BuildInfo;
+import org.openqa.selenium.net.PortProber;
 import org.openqa.selenium.remote.server.SeleniumServer;
 import org.openqa.selenium.remote.server.log.LoggingOptions;
 import org.openqa.selenium.remote.server.log.TerseFormatter;
@@ -71,7 +72,6 @@ public class GridLauncherV3 {
       StringBuilder sb = new StringBuilder();
       new JCommander(getOptions()).usage(sb);
       out.print(sb);
-
     }
   }
 
@@ -275,7 +275,7 @@ public class GridLauncherV3 {
 
         })
         .put(GridRole.HUB.toString(), (args) -> new GridItemLauncher() {
-          GridHubCliOptions options = new GridHubCliOptions().parse(args);
+          GridHubCliOptions options = new GridHubCliOptions.Parser().parse(args);
 
           @Override
           public CommonCliOptions getOptions() {
@@ -293,7 +293,7 @@ public class GridLauncherV3 {
           }
         })
         .put(GridRole.NODE.toString(), (args) -> new GridItemLauncher() {
-          GridNodeCliOptions options = new GridNodeCliOptions().parse(args);
+          GridNodeCliOptions options = new GridNodeCliOptions.Parser().parse(args);
 
           @Override
           public CommonCliOptions getOptions() {
@@ -303,6 +303,9 @@ public class GridLauncherV3 {
           @Override
           public Stoppable launch() throws Exception {
             GridNodeConfiguration configuration = options.toConfiguration();
+            if (configuration.port == null || configuration.port == -1) {
+              configuration.port = PortProber.findFreePort();
+            }
             log.info(String.format(
                 "Launching a Selenium Grid node on port %s", configuration.port));
             SelfRegisteringRemote remote = new SelfRegisteringRemote(configuration);

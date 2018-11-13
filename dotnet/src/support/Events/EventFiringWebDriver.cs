@@ -620,16 +620,6 @@ namespace OpenQA.Selenium.Support.Events
         /// <summary>
         /// Raises the <see cref="ElementValueChanging"/> event.
         /// </summary>
-        /// <param name="e">A <see cref="WebElementEventArgs"/> that contains the event data.</param>
-        [Obsolete("Use the new overload that takes a WebElementValueEventArgs argument")]
-        protected virtual void OnElementValueChanging(WebElementEventArgs e)
-        {
-            this.OnElementValueChanging(new WebElementValueEventArgs(e.Driver, e.Element, null));
-        }
-
-        /// <summary>
-        /// Raises the <see cref="ElementValueChanging"/> event.
-        /// </summary>
         /// <param name="e">A <see cref="WebElementValueEventArgs"/> that contains the event data.</param>
         protected virtual void OnElementValueChanging(WebElementValueEventArgs e)
         {
@@ -637,16 +627,6 @@ namespace OpenQA.Selenium.Support.Events
             {
                 this.ElementValueChanging(this, e);
             }
-        }
-
-        /// <summary>
-        /// Raises the <see cref="ElementValueChanged"/> event.
-        /// </summary>
-        /// <param name="e">A <see cref="WebElementEventArgs"/> that contains the event data.</param>
-        [Obsolete("Use the new overload that takes a WebElementValueEventArgs argument")]
-        protected virtual void OnElementValueChanged(WebElementEventArgs e)
-        {
-            this.OnElementValueChanged(e);
         }
 
         /// <summary>
@@ -727,7 +707,7 @@ namespace OpenQA.Selenium.Support.Events
             List<object> unwrappedArgs = new List<object>();
             foreach (object arg in args)
             {
-                EventFiringWebElement eventElementArg = arg as EventFiringWebElement;
+                IWrapsElement eventElementArg = arg as IWrapsElement;
                 if (eventElementArg != null)
                 {
                     unwrappedArgs.Add(eventElementArg.WrappedElement);

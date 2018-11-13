@@ -1,3 +1,4 @@
+require 'inifile'
 require 'open3'
 require 'rake-tasks/checks'
 
@@ -27,8 +28,8 @@ module Buck
       out_dir = File.dirname out
       FileUtils.mkdir_p(out_dir) unless File.exist?(out_dir)
 
-      require "third_party/java/httpcomponents/httpcore-4.4.6"
-      require "third_party/java/httpcomponents/httpclient-4.5.3"
+      require "third_party/java/httpcomponents/httpcore-4.4.9"
+      require "third_party/java/httpcomponents/httpclient-4.5.5"
       require "third_party/java/commons-logging/commons-logging-1.2"
       require "third_party/java/commons-io/commons-io-2.6"
 
@@ -46,7 +47,15 @@ module Buck
       org.apache.http.util.EntityUtils.consume(entity) unless entity.nil?
 
       File.chmod(0755, out)
-      cmd = (windows?) ? ["python", out] : [out]
+
+      cmd = if windows?
+              buckconfigs = [IniFile.load('.buckconfig.local'), IniFile.load('.buckconfig')]
+              python_interpreter = buckconfigs.lazy.map { |c| c && c['parser']['python_interpreter'] }.find(&:itself)
+              [python_interpreter || "python", out]
+            else
+              [out]
+            end
+
       sh cmd.join(" ") + " kill", :verbose => true
       cmd
     )

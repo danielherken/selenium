@@ -29,6 +29,11 @@ namespace OpenQA.Selenium.IE
     public enum InternetExplorerElementScrollBehavior
     {
         /// <summary>
+        /// Indicates the behavior is unspecified.
+        /// </summary>
+        Default,
+
+        /// <summary>
         /// Scrolls elements to align with the top of the viewport.
         /// </summary>
         Top,
@@ -37,32 +42,6 @@ namespace OpenQA.Selenium.IE
         /// Scrolls elements to align with the bottom of the viewport.
         /// </summary>
         Bottom
-    }
-
-    /// <summary>
-    /// Specifies the behavior of handling unexpected alerts in the IE driver.
-    /// </summary>
-    public enum InternetExplorerUnexpectedAlertBehavior
-    {
-        /// <summary>
-        /// Indicates the behavior is not set.
-        /// </summary>
-        Default,
-
-        /// <summary>
-        /// Ignore unexpected alerts, such that the user must handle them.
-        /// </summary>
-        Ignore,
-
-        /// <summary>
-        /// Accept unexpected alerts.
-        /// </summary>
-        Accept,
-
-        /// <summary>
-        /// Dismiss unexpected alerts.
-        /// </summary>
-        Dismiss
     }
 
     /// <summary>
@@ -126,7 +105,7 @@ namespace OpenQA.Selenium.IE
         private TimeSpan fileUploadDialogTimeout = TimeSpan.MinValue;
         private string initialBrowserUrl = string.Empty;
         private string browserCommandLineArguments = string.Empty;
-        private InternetExplorerElementScrollBehavior elementScrollBehavior = InternetExplorerElementScrollBehavior.Top;
+        private InternetExplorerElementScrollBehavior elementScrollBehavior = InternetExplorerElementScrollBehavior.Default;
         private Dictionary<string, object> additionalCapabilities = new Dictionary<string, object>();
         private Dictionary<string, object> additionalInternetExplorerOptions = new Dictionary<string, object>();
 
@@ -213,17 +192,6 @@ namespace OpenQA.Selenium.IE
         {
             get { return this.elementScrollBehavior; }
             set { this.elementScrollBehavior = value; }
-        }
-
-        /// <summary>
-        /// Gets or sets the value for describing how unexpected alerts are to be handled in the IE driver.
-        /// Defaults to <see cref="InternetExplorerUnexpectedAlertBehavior.Default"/>.
-        /// </summary>
-        [Obsolete("This property is being replaced by the UnhandledPromptBehavior property, and will be removed in a future version of the .NET bindings. Please use that instead.")]
-        public InternetExplorerUnexpectedAlertBehavior UnexpectedAlertBehavior
-        {
-            get { return this.GetUnexpectedAlertBehavior(); }
-            set { this.SetUnhandledPromptBehavior(value); }
         }
 
         /// <summary>
@@ -314,17 +282,6 @@ namespace OpenQA.Selenium.IE
         }
 
         /// <summary>
-        /// Gets or sets a value indicating whether to enable full-page screenshots for
-        /// the IE driver. Defaults to <see langword="true"/>.
-        /// </summary>
-        [Obsolete("The driver no longer supports this capability. It will be removed in a future release.")]
-        public bool EnableFullPageScreenshot
-        {
-            get { return this.enableFullPageScreenshot; }
-            set { this.enableFullPageScreenshot = value; }
-        }
-
-        /// <summary>
         /// Provides a means to add additional capabilities not yet added as type safe options
         /// for the Internet Explorer driver.
         /// </summary>
@@ -403,6 +360,7 @@ namespace OpenQA.Selenium.IE
                 capabilities.SetCapability(pair.Key, pair.Value);
             }
 
+            // Should return capabilities.AsReadOnly(), and will in a future release.
             return capabilities;
         }
 
@@ -432,9 +390,16 @@ namespace OpenQA.Selenium.IE
                 internetExplorerOptionsDictionary[InitialBrowserUrlCapability] = this.initialBrowserUrl;
             }
 
-            if (this.elementScrollBehavior == InternetExplorerElementScrollBehavior.Bottom)
+            if (this.elementScrollBehavior != InternetExplorerElementScrollBehavior.Default)
             {
-                internetExplorerOptionsDictionary[ElementScrollBehaviorCapability] = 1;
+                if (this.elementScrollBehavior == InternetExplorerElementScrollBehavior.Bottom)
+                {
+                    internetExplorerOptionsDictionary[ElementScrollBehaviorCapability] = 1;
+                }
+                else
+                {
+                    internetExplorerOptionsDictionary[ElementScrollBehaviorCapability] = 0;
+                }
             }
 
             if (this.browserAttachTimeout != TimeSpan.MinValue)
@@ -482,45 +447,6 @@ namespace OpenQA.Selenium.IE
             }
 
             return internetExplorerOptionsDictionary;
-        }
-
-        private void SetUnhandledPromptBehavior(InternetExplorerUnexpectedAlertBehavior unexpectedAlertBehavior)
-        {
-            switch (unexpectedAlertBehavior)
-            {
-                case InternetExplorerUnexpectedAlertBehavior.Accept:
-                    this.UnhandledPromptBehavior = UnhandledPromptBehavior.AcceptAndNotify;
-                    break;
-
-                case InternetExplorerUnexpectedAlertBehavior.Dismiss:
-                    this.UnhandledPromptBehavior = UnhandledPromptBehavior.DismissAndNotify;
-                    break;
-
-                case InternetExplorerUnexpectedAlertBehavior.Ignore:
-                    this.UnhandledPromptBehavior = UnhandledPromptBehavior.Ignore;
-                    break;
-
-                default:
-                    this.UnhandledPromptBehavior = UnhandledPromptBehavior.Default;
-                    break;
-            }
-        }
-
-        private InternetExplorerUnexpectedAlertBehavior GetUnexpectedAlertBehavior()
-        {
-            switch (this.UnhandledPromptBehavior)
-            {
-                case UnhandledPromptBehavior.AcceptAndNotify:
-                    return InternetExplorerUnexpectedAlertBehavior.Accept;
-
-                case UnhandledPromptBehavior.DismissAndNotify:
-                    return InternetExplorerUnexpectedAlertBehavior.Dismiss;
-
-                case UnhandledPromptBehavior.Ignore:
-                    return InternetExplorerUnexpectedAlertBehavior.Ignore;
-            }
-
-            return InternetExplorerUnexpectedAlertBehavior.Default;
         }
     }
 }

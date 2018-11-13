@@ -17,15 +17,12 @@
 
 package org.openqa.grid.internal;
 
-import com.google.gson.JsonObject;
-
 import org.openqa.grid.common.RegistrationRequest;
 import org.openqa.grid.common.SeleniumProtocol;
 import org.openqa.grid.internal.utils.CapabilityMatcher;
 import org.openqa.grid.internal.utils.HtmlRenderer;
 import org.openqa.grid.internal.utils.configuration.GridNodeConfiguration;
 import org.openqa.selenium.remote.http.HttpClient;
-import org.openqa.selenium.remote.internal.HttpClientFactory;
 
 import java.net.URL;
 import java.util.List;
@@ -160,19 +157,15 @@ public interface RemoteProxy extends Comparable<RemoteProxy> {
   int getTimeOut();
 
   /**
-   * @return an {@link }HttpClient} for a particular {@link URL}.
+   * @return an {@link HttpClient} for a particular {@link URL}.
    */
   HttpClient getHttpClient(URL url);
 
-  /**
+    /**
    * Renders the status of the node as JSON.  Useful for APIs.
    *
    * @return the node status.
-   * @deprecated Use {@link #getProxyStatus()}.
    */
-  @Deprecated
-  JsonObject getStatus();
-
   Map<String, Object> getProxyStatus();
 
   /**

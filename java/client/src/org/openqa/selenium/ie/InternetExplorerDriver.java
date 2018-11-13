@@ -20,12 +20,10 @@ package org.openqa.selenium.ie;
 import com.google.common.base.Preconditions;
 
 import org.openqa.selenium.Capabilities;
-import org.openqa.selenium.OutputType;
 import org.openqa.selenium.Platform;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.DesiredCapabilities;
-import org.openqa.selenium.remote.DriverCommand;
 import org.openqa.selenium.remote.FileDetector;
 import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.remote.service.DriverCommandExecutor;
@@ -228,14 +226,6 @@ public class InternetExplorerDriver extends RemoteWebDriver {
     throw new WebDriverException(
         "Setting the file detector only works on remote webdriver instances obtained " +
         "via RemoteWebDriver");
-  }
-
-  public <X> X getScreenshotAs(OutputType<X> target) {
-    // Get the screenshot as base64.
-    String base64 = execute(DriverCommand.SCREENSHOT).getValue().toString();
-
-    // ... and convert it.
-    return target.convertFromBase64Png(base64);
   }
 
   protected void assertOnWindows() {

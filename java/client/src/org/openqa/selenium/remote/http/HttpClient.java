@@ -18,7 +18,7 @@
 package org.openqa.selenium.remote.http;
 
 import org.openqa.selenium.Platform;
-import org.openqa.selenium.internal.BuildInfo;
+import org.openqa.selenium.BuildInfo;
 import org.openqa.selenium.remote.internal.ApacheHttpClient;
 import org.openqa.selenium.remote.internal.OkHttpClient;
 
@@ -45,15 +45,6 @@ public interface HttpClient {
    * @throws IOException if an I/O error occurs.
    */
   HttpResponse execute(HttpRequest request) throws IOException;
-
-  /**
-	 * Closes the connections associated with this client.
-	 *
-	 * @throws  IOException  if an I/O error occurs.
-   * @deprecated This responsibility moved to Factory
-	 */
-  @Deprecated
-  void close() throws IOException;
 
   interface Factory {
 

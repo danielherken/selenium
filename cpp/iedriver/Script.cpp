@@ -358,7 +358,7 @@ int Script::ExecuteAsync(const IECommandExecutor& command_executor,
     // If we set a timeout override, that means we expect relatively quick
     // execution with no need to retrieve elements as part of the script
     // result. We will wait a short bit and poll for the execution of the
-    // script to be complete. This will allow us to say synchronous fo
+    // script to be complete. This will allow us to say synchronous for
     // short-running scripts like clearing an input element, yet still be
     // able to continue processing when the script is blocked, as when an
     // alert() window is present.
@@ -377,15 +377,6 @@ int Script::ExecuteAsync(const IECommandExecutor& command_executor,
     }
 
     if (is_execution_finished) {
-      // TODO: Marshal the actual result from the AsyncScriptExecutor window
-      // thread to this one. At present, this asynchronous execution of
-      // JavaScript (where we wait inline, and do not pass execution control
-      // back to the main command executor), is only used for Automation Atoms
-      // on an element which could cause an // alert to appear (e.g., clear,
-      // click, or submit), and do not return any return values back to the
-      // caller. In this case, the return code of the  execution method is
-      // sufficent. To return the acutal marshalled value of the script result,
-      // do not override the timeout.
       LOG(TRACE) << "Async script execution completed, getting result";
       Json::Value script_result;
       int status_code = static_cast<int>(::SendMessage(*async_executor_handle,
@@ -523,7 +514,13 @@ int Script::SetAsyncScriptElementArgument(HWND async_executor_handle,
   ElementInfo* info = new ElementInfo;
   info->element_id = element_id;
   ElementHandle element_wrapper;
-  int return_code = command_executor.GetManagedElement(element_id, &element_wrapper);
+  int return_code = command_executor.GetManagedElement(element_id,
+                                                       &element_wrapper);
+  if (return_code != WD_SUCCESS) {
+    LOG(WARN) << "Element requested with id " << element_id
+              << " does not exist.";
+    return return_code;
+  }
   HRESULT hr = ::CoMarshalInterThreadInterfaceInStream(IID_IHTMLElement,
                                                        element_wrapper->element(),
                                                        &info->element_stream);

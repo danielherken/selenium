@@ -71,6 +71,20 @@ class Condition {
   description() {
     return this.description_;
   }
+
+  /**
+   * Allows for lenient instanceof checks
+   * @param {!(IThenable<T>|
+   *           Condition<T>|
+   *           function(!WebDriver): T)} condition - the condition instance
+   * @return {boolean}
+   */
+  static [Symbol.hasInstance](condition) {
+    return !!condition
+      && typeof condition === 'object'
+      && typeof condition.description === 'function'
+      && typeof condition.fn === 'function';
+  }
 }
 
 
@@ -618,8 +632,8 @@ function filterNonW3CCaps(capabilities) {
  */
 class WebDriver {
   /**
-   * @param {!(Session|IThenable<!Session>)} session Either a known session or a
-   *     promise that will be resolved to a session.
+   * @param {!(./session.Session|IThenable<!./session.Session>)} session Either
+   *     a known session or a promise that will be resolved to a session.
    * @param {!command.Executor} executor The executor to use when sending
    *     commands to the browser.
    * @param {(function(this: void): ?)=} onQuit A function to call, if any,

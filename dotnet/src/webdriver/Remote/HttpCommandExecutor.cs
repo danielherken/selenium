@@ -40,6 +40,8 @@ namespace OpenQA.Selenium.Remote
         private Uri remoteServerUri;
         private TimeSpan serverResponseTimeout;
         private bool enableKeepAlive;
+        private bool isDisposed;
+        private IWebProxy proxy;
         private CommandInfoRepository commandInfoRepository = new WebDriverWireProtocolCommandInfoRepository();
 
         /// <summary>
@@ -90,7 +92,7 @@ namespace OpenQA.Selenium.Remote
 
         }
 
-        public event EventHandler<BeforeRemoteHttpRequestEventArgs> BeforeRemoteHttpRequest;
+        public event EventHandler<SendingRemoteHttpRequestEventArgs> SendingRemoteHttpRequest;
 
         /// <summary>
         /// Gets the repository of objects containin information about commands.
@@ -98,6 +100,28 @@ namespace OpenQA.Selenium.Remote
         public CommandInfoRepository CommandInfoRepository
         {
             get { return this.commandInfoRepository; }
+        }
+
+        /// <summary>
+        /// Gets or sets an <see cref="IWebProxy"/> object to be used to proxy requests
+        /// between this <see cref="HttpCommandExecutor"/> and the remote end WebDriver
+        /// implementation.
+        /// </summary>
+        public IWebProxy Proxy
+        {
+            get { return this.proxy; }
+            set { this.proxy = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether keep-alive is enabled for HTTP
+        /// communication between this <see cref="HttpCommandExecutor"/> and the
+        /// remote end WebDriver implementation.
+        /// </summary>
+        public bool IsKeepAliveEnabled
+        {
+            get { return this.enableKeepAlive; }
+            set { this.enableKeepAlive = value; }
         }
 
         /// <summary>
@@ -135,19 +159,19 @@ namespace OpenQA.Selenium.Remote
         }
 
         /// <summary>
-        /// Raises the <see cref="BeforeRemoteHttpRequest"/> event.
+        /// Raises the <see cref="SendingRemoteHttpRequest"/> event.
         /// </summary>
-        /// <param name="eventArgs">A <see cref="BeforeRemoteHttpRequestEventArgs"/> that contains the event data.</param>
-        protected virtual void OnBeforeRemoteHttpRequest(BeforeRemoteHttpRequestEventArgs eventArgs)
+        /// <param name="eventArgs">A <see cref="SendingRemoteHttpRequestEventArgs"/> that contains the event data.</param>
+        protected virtual void OnSendingRemoteHttpRequest(SendingRemoteHttpRequestEventArgs eventArgs)
         {
             if (eventArgs == null)
             {
                 throw new ArgumentNullException("eventArgs", "eventArgs must not be null");
             }
 
-            if (this.BeforeRemoteHttpRequest != null)
+            if (this.SendingRemoteHttpRequest != null)
             {
-                this.BeforeRemoteHttpRequest(this, eventArgs);
+                this.SendingRemoteHttpRequest(this, eventArgs);
             }
         }
 
@@ -185,23 +209,25 @@ namespace OpenQA.Selenium.Remote
             request.Timeout = (int)this.serverResponseTimeout.TotalMilliseconds;
             request.Accept = RequestAcceptHeader;
             request.KeepAlive = this.enableKeepAlive;
-            request.Proxy = null;
+            request.Proxy = this.proxy;
             request.ServicePoint.ConnectionLimit = 2000;
+            if (request.Method == CommandInfo.GetCommand)
+            {
+                request.Headers.Add("Cache-Control", "no-cache");
+            }
+
+            SendingRemoteHttpRequestEventArgs eventArgs = new SendingRemoteHttpRequestEventArgs(request, requestInfo.RequestBody);
+            this.OnSendingRemoteHttpRequest(eventArgs);
+
             if (request.Method == CommandInfo.PostCommand)
             {
-                string payload = requestInfo.RequestBody;
+                string payload = eventArgs.RequestBody;
                 byte[] data = Encoding.UTF8.GetBytes(payload);
                 request.ContentType = ContentTypeHeader;
                 Stream requestStream = request.GetRequestStream();
                 requestStream.Write(data, 0, data.Length);
                 requestStream.Close();
             }
-            else if (request.Method == CommandInfo.GetCommand)
-            {
-                request.Headers.Add("Cache-Control", "no-cache");
-            }
-
-            this.OnBeforeRemoteHttpRequest(new BeforeRemoteHttpRequestEventArgs(request));
 
             HttpResponseInfo responseInfo = new HttpResponseInfo();
             HttpWebResponse webResponse = null;
@@ -290,6 +316,28 @@ namespace OpenQA.Selenium.Remote
             }
 
             return commandResponse;
+        }
+
+        /// <summary>
+        /// Releases all resources used by the <see cref="HttpCommandExecutor"/>.
+        /// </summary>
+        public void Dispose()
+        {
+            this.Dispose(true);
+        }
+
+        /// <summary>
+        /// Releases the unmanaged resources used by the <see cref="HttpCommandExecutor"/> and
+        /// optionally releases the managed resources.
+        /// </summary>
+        /// <param name="disposing"><see langword="true"/> to release managed and resources;
+        /// <see langword="false"/> to only release unmanaged resources.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!this.isDisposed)
+            {
+                this.isDisposed = true;
+            }
         }
 
         private class HttpRequestInfo
